@@ -118,5 +118,10 @@ gulp.task('zip', shell.task([
       'zip ' + pkg + ' ' + 'README.md NOTICE LICENSE HISTORY.md index.html src dist docs examples -r '
 ]));
 
+gulp.task('watch', ['bundle'], function(){
+    gulp.watch('src/js/*.*', ['bundle']);
+});
+
 // The default task (called when you run `gulp`)
-gulp.task('default', ['bundle', 'bundle-css', 'copy-img', 'minify']);
+//gulp.task('default', ['bundle', 'bundle-css', 'copy-img', 'minify']);
+gulp.task('default', ['bundle']);

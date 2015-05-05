@@ -43,6 +43,7 @@ function appendNodeFactory(Node) {
     // TODO: consistent naming
 
     if (this.editable.field) {
+        //console.log(this.editable);
       // a cell for the dragarea column
       dom.tdDrag = document.createElement('td');
 

@@ -100,6 +100,10 @@ JSONEditor.prototype.get = function () {
   return this.json;
 };
 
+JSONEditor.prototype.getChecked = function () {
+  return this._checkedJson;
+};
+
 /**
  * Set string containing JSON for the editor
  * @param {String | undefined} jsonText
@@ -149,19 +153,44 @@ JSONEditor.prototype.setMode = function (mode) {
 
   options.mode = mode;
   var config = JSONEditor.modes[mode];
+  //console.log(">>> This is mode in JSONEditor.js");
+  //console.log(mode)
+  //console.log(">>> This is options in JSONEditor.js");
+  //console.log(options)
+  //console.log(">>> This is config in JSONEditor.js");
+  //console.log(config);
+  //console.log(123)
+
   if (config) {
     try {
       var asText = (config.data == 'text');
       name = this.getName();
       data = this[asText ? 'getText' : 'get'](); // get text or json
+  //console.log(">>> This is this in JSONEditor.js");
+//      console.log(this)
+//      console.log(Object.keys(this).length);
+//      console.log(this.json)
 
       this._delete();
+
       util.clear(this);
+
+  //console.log(">>> This is this after clear in JSONEditor.js");
+  //    console.log(this)
+  //    console.log(Object.keys(this).length);
+  //    console.log(this.json)
+
       util.extend(this, config.mixin);
+  //console.log(">>> This is this after extend in JSONEditor.js");
+  //    console.log(this)
+  //    console.log(Object.keys(this).length);
       this.create(container, options);
 
       this.setName(name);
       this[asText ? 'setText' : 'set'](data); // set text or json
+  //    console.log(this)
+  //    console.log(Object.keys(this).length)
+  //    console.log(this.json)
 
       if (typeof config.load === 'function') {
         try {

@@ -32,8 +32,10 @@ treemode.create = function (container, options) {
   this.dom = {};
   this.highlighter = new Highlighter();
   this.selection = undefined; // will hold the last input selection
+  this.checked = {}; // will hold the checked nodes
 
   this._setOptions(options);
+  //console.log(options)
 
   if (this.options.history && this.options.mode !== 'view') {
     this.history = new History(this);
@@ -77,7 +79,7 @@ treemode._setOptions = function (options) {
 };
 
 // node currently being edited
-var focusNode = undefined;
+var focusNode;
 
 // dom having focus
 var domFocus = null;
@@ -365,6 +367,25 @@ treemode.stopAutoScroll = function () {
 };
 
 
+treemode.setChecked = function(node) {
+    //console.log("Set checked!!!!!!!!!!!!!!")
+    var key = node.field;
+    var value = node.getValue();
+    var o = {}
+    o[key] = value
+    //console.log(o);
+    this.checked = util.extend(this.checked, o);
+}
+
+treemode.getChecked = function() {
+  // remove focus from currently edited node
+  //if (focusNode) {
+  //  focusNode.blur();
+  //}
+
+    return this.checked;
+}
+
 /**
  * Set the focus to an element in the editor, set text selection, and
  * set scroll position.
@@ -512,7 +533,6 @@ treemode._createFrame = function () {
   this.menu.className = 'menu';
   this.frame.appendChild(this.menu);
 
-  // create expand all button
   var expandAll = document.createElement('button');
   expandAll.className = 'expand-all';
   expandAll.title = 'Expand all fields';
@@ -521,7 +541,7 @@ treemode._createFrame = function () {
   };
   this.menu.appendChild(expandAll);
 
-  // create expand all button
+  // create collapse all button
   var collapseAll = document.createElement('button');
   collapseAll.title = 'Collapse all fields';
   collapseAll.className = 'collapse-all';
@@ -702,8 +722,8 @@ treemode._createTable = function () {
   this.table.className = 'tree';
   this.content.appendChild(this.table);
 
-  // create colgroup where the first two columns don't have a fixed
-  // width, and the edit columns do have a fixed width
+  // create colgroup where the first two columns do have a fixed
+  // width, and the edit columns don't have a fixed width
   var col;
   this.colgroupContent = document.createElement('colgroup');
   if (this.options.mode === 'tree') {
@@ -738,6 +758,11 @@ module.exports = [
   },
   {
     mode: 'form',
+    mixin: treemode,
+    data: 'json'
+  },
+  {
+    mode: 'checkbox',
     mixin: treemode,
     data: 'json'
   }

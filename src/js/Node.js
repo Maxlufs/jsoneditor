@@ -85,6 +85,7 @@ Node.prototype.path = function () {
  */
 Node.prototype.setParent = function (parent) {
     this.parent = parent;
+    this.parent._uncheckedChildren +=1;
 };
 
 /**
@@ -2177,13 +2178,20 @@ Node.prototype._propup = function () {
         // only props up when it is fully checked
         // use checkbox state to determine prop up or not
         this.parent._checkedChildren += 1;
+        if(this.parent._checkedChildren >= this.parent.childs.length)
+            this.parent._checkedChildren = this.parent.childs.length;
+        this.parent._uncheckedChildren -= 1;
+        if (this.parent._uncheckedChildren <=0)
+            { this.parent._uncheckedChildren = 0; }
     } else if (!this.dom.checkbox.checked && !this.dom.checkbox.indeterminate) {
         // when the node is not checked
         this.parent._checkedChildren -= 1;
         if (this.parent._checkedChildren <= 0)
-            this.parent._checkedChildren = 0;
+            { this.parent._checkedChildren = 0; }
 
         this.parent._uncheckedChildren += 1;
+        if(this.parent._uncheckedChildren >= this.parent.childs.length)
+            this.parent._uncheckedChildren = this.parent.childs.length;
     }
 
         console.log(this.parent._checkedChildren, this.parent._uncheckedChildren);

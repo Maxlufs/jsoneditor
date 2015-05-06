@@ -24,7 +24,7 @@
  *
  * @author  Jos de Jong, <wjosdejong@gmail.com>
  * @version 4.1.3
- * @date    2015-03-17
+ * @date    2015-05-06
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -184,6 +184,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return this.json;
 	};
 
+	JSONEditor.prototype.getChecked = function () {
+	  return this._checkedJson;
+	};
+
 	/**
 	 * Set string containing JSON for the editor
 	 * @param {String | undefined} jsonText
@@ -233,19 +237,44 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  options.mode = mode;
 	  var config = JSONEditor.modes[mode];
+	  //console.log(">>> This is mode in JSONEditor.js");
+	  //console.log(mode)
+	  //console.log(">>> This is options in JSONEditor.js");
+	  //console.log(options)
+	  //console.log(">>> This is config in JSONEditor.js");
+	  //console.log(config);
+	  //console.log(123)
+
 	  if (config) {
 	    try {
 	      var asText = (config.data == 'text');
 	      name = this.getName();
 	      data = this[asText ? 'getText' : 'get'](); // get text or json
+	  //console.log(">>> This is this in JSONEditor.js");
+	//      console.log(this)
+	//      console.log(Object.keys(this).length);
+	//      console.log(this.json)
 
 	      this._delete();
+
 	      util.clear(this);
+
+	  //console.log(">>> This is this after clear in JSONEditor.js");
+	  //    console.log(this)
+	  //    console.log(Object.keys(this).length);
+	  //    console.log(this.json)
+
 	      util.extend(this, config.mixin);
+	  //console.log(">>> This is this after extend in JSONEditor.js");
+	  //    console.log(this)
+	  //    console.log(Object.keys(this).length);
 	      this.create(container, options);
 
 	      this.setName(name);
 	      this[asText ? 'setText' : 'set'](data); // set text or json
+	  //    console.log(this)
+	  //    console.log(Object.keys(this).length)
+	  //    console.log(this.json)
 
 	      if (typeof config.load === 'function') {
 	        try {
@@ -377,22 +406,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode.create = function (container, options) {
-	  if (!container) {
-	    throw new Error('No container element provided.');
-	  }
-	  this.container = container;
-	  this.dom = {};
-	  this.highlighter = new Highlighter();
-	  this.selection = undefined; // will hold the last input selection
+	    if (!container) {
+	        throw new Error('No container element provided.');
+	    }
+	    this.container = container;
+	    this.dom = {};
+	    this.highlighter = new Highlighter();
+	    this.selection = undefined; // will hold the last input selection
+	    this.checked = {}; // will hold the checked nodes
 
-	  this._setOptions(options);
+	    this._setOptions(options);
+	    //console.log(options)
 
-	  if (this.options.history && this.options.mode !== 'view') {
-	    this.history = new History(this);
-	  }
+	    if (this.options.history && this.options.mode !== 'view') {
+	        this.history = new History(this);
+	    }
 
-	  this._createFrame();
-	  this._createTable();
+	    this._createFrame();
+	    this._createTable();
 	};
 
 	/**
@@ -400,9 +431,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._delete = function () {
-	  if (this.frame && this.container && this.frame.parentNode == this.container) {
-	    this.container.removeChild(this.frame);
-	  }
+	    if (this.frame && this.container && this.frame.parentNode == this.container) {
+	        this.container.removeChild(this.frame);
+	    }
 	};
 
 	/**
@@ -411,25 +442,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._setOptions = function (options) {
-	  this.options = {
-	    search: true,
-	    history: true,
-	    mode: 'tree',
-	    name: undefined   // field name of root node
-	  };
+	    this.options = {
+	        search: true,
+	        history: true,
+	        mode: 'tree',
+	        name: undefined // field name of root node
+	    };
 
-	  // copy all options
-	  if (options) {
-	    for (var prop in options) {
-	      if (options.hasOwnProperty(prop)) {
-	        this.options[prop] = options[prop];
-	      }
+	    // copy all options
+	    if (options) {
+	        for (var prop in options) {
+	            if (options.hasOwnProperty(prop)) {
+	                this.options[prop] = options[prop];
+	            }
+	        }
 	    }
-	  }
 	};
 
 	// node currently being edited
-	var focusNode = undefined;
+	var focusNode;
 
 	// dom having focus
 	var domFocus = null;
@@ -441,40 +472,39 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                                       Can also be set using setName(name).
 	 */
 	treemode.set = function (json, name) {
-	  // adjust field name for root node
-	  if (name) {
-	    // TODO: deprecated since version 2.2.0. Cleanup some day.
-	    util.log('Warning: second parameter "name" is deprecated. ' +
-	        'Use setName(name) instead.');
-	    this.options.name = name;
-	  }
+	    // adjust field name for root node
+	    if (name) {
+	        // TODO: deprecated since version 2.2.0. Cleanup some day.
+	        util.log('Warning: second parameter "name" is deprecated. ' +
+	            'Use setName(name) instead.');
+	        this.options.name = name;
+	    }
 
-	  // verify if json is valid JSON, ignore when a function
-	  if (json instanceof Function || (json === undefined)) {
-	    this.clear();
-	  }
-	  else {
-	    this.content.removeChild(this.table);  // Take the table offline
+	    // verify if json is valid JSON, ignore when a function
+	    if (json instanceof Function || (json === undefined)) {
+	        this.clear();
+	    } else {
+	        this.content.removeChild(this.table); // Take the table offline
 
-	    // replace the root node
-	    var params = {
-	      'field': this.options.name,
-	      'value': json
-	    };
-	    var node = new Node(this, params);
-	    this._setRoot(node);
+	        // replace the root node
+	        var params = {
+	            'field': this.options.name,
+	            'value': json
+	        };
+	        var node = new Node(this, params);
+	        this._setRoot(node);
 
-	    // expand
-	    var recurse = false;
-	    this.node.expand(recurse);
+	        // expand
+	        var recurse = false;
+	        this.node.expand(recurse);
 
-	    this.content.appendChild(this.table);  // Put the table online again
-	  }
+	        this.content.appendChild(this.table); // Put the table online again
+	    }
 
-	  // TODO: maintain history, store last state and previous document
-	  if (this.history) {
-	    this.history.clear();
-	  }
+	    // TODO: maintain history, store last state and previous document
+	    if (this.history) {
+	        this.history.clear();
+	    }
 	};
 
 	/**
@@ -482,33 +512,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Object | undefined} json
 	 */
 	treemode.get = function () {
-	  // remove focus from currently edited node
-	  if (focusNode) {
-	    focusNode.blur();
-	  }
+	    // remove focus from currently edited node
+	    if (focusNode) {
+	        focusNode.blur();
+	    }
 
-	  if (this.node) {
-	    return this.node.getValue();
-	  }
-	  else {
-	    return undefined;
-	  }
+	    if (this.node) {
+	        return this.node.getValue();
+	    } else {
+	        return undefined;
+	    }
 	};
 
 	/**
 	 * Get the text contents of the editor
 	 * @return {String} jsonText
 	 */
-	treemode.getText = function() {
-	  return JSON.stringify(this.get());
+	treemode.getText = function () {
+	    return JSON.stringify(this.get());
 	};
 
 	/**
 	 * Set the text contents of the editor
 	 * @param {String} jsonText
 	 */
-	treemode.setText = function(jsonText) {
-	  this.set(util.parse(jsonText));
+	treemode.setText = function (jsonText) {
+	    this.set(util.parse(jsonText));
 	};
 
 	/**
@@ -516,10 +545,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String | undefined} name
 	 */
 	treemode.setName = function (name) {
-	  this.options.name = name;
-	  if (this.node) {
-	    this.node.updateField(this.options.name);
-	  }
+	    this.options.name = name;
+	    if (this.node) {
+	        this.node.updateField(this.options.name);
+	    }
 	};
 
 	/**
@@ -527,7 +556,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {String | undefined} name
 	 */
 	treemode.getName = function () {
-	  return this.options.name;
+	    return this.options.name;
 	};
 
 	/**
@@ -538,34 +567,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * - to the first button in the top menu
 	 */
 	treemode.focus = function () {
-	  var input = this.content.querySelector('[contenteditable=true]');
-	  if (input) {
-	    input.focus();
-	  }
-	  else if (this.node.dom.expand) {
-	    this.node.dom.expand.focus();
-	  }
-	  else if (this.node.dom.menu) {
-	    this.node.dom.menu.focus();
-	  }
-	  else {
-	    // focus to the first button in the menu
-	    input = this.frame.querySelector('button');
+	    var input = this.content.querySelector('[contenteditable=true]');
 	    if (input) {
-	      input.focus();
+	        input.focus();
+	    } else if (this.node.dom.expand) {
+	        this.node.dom.expand.focus();
+	    } else if (this.node.dom.menu) {
+	        this.node.dom.menu.focus();
+	    } else {
+	        // focus to the first button in the menu
+	        input = this.frame.querySelector('button');
+	        if (input) {
+	            input.focus();
+	        }
 	    }
-	  }
 	};
 
 	/**
 	 * Remove the root node from the editor
 	 */
 	treemode.clear = function () {
-	  if (this.node) {
-	    this.node.collapse();
-	    this.tbody.removeChild(this.node.getDom());
-	    delete this.node;
-	  }
+	    if (this.node) {
+	        this.node.collapse();
+	        this.tbody.removeChild(this.node.getDom());
+	        delete this.node;
+	    }
 	};
 
 	/**
@@ -574,12 +600,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._setRoot = function (node) {
-	  this.clear();
+	    this.clear();
 
-	  this.node = node;
+	    this.node = node;
 
-	  // append to the dom
-	  this.tbody.appendChild(node.getDom());
+	    // append to the dom
+	    this.tbody.appendChild(node.getDom());
 	};
 
 	/**
@@ -595,39 +621,38 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                                              'value')
 	 */
 	treemode.search = function (text) {
-	  var results;
-	  if (this.node) {
-	    this.content.removeChild(this.table);  // Take the table offline
-	    results = this.node.search(text);
-	    this.content.appendChild(this.table);  // Put the table online again
-	  }
-	  else {
-	    results = [];
-	  }
+	    var results;
+	    if (this.node) {
+	        this.content.removeChild(this.table); // Take the table offline
+	        results = this.node.search(text);
+	        this.content.appendChild(this.table); // Put the table online again
+	    } else {
+	        results = [];
+	    }
 
-	  return results;
+	    return results;
 	};
 
 	/**
 	 * Expand all nodes
 	 */
 	treemode.expandAll = function () {
-	  if (this.node) {
-	    this.content.removeChild(this.table);  // Take the table offline
-	    this.node.expand();
-	    this.content.appendChild(this.table);  // Put the table online again
-	  }
+	    if (this.node) {
+	        this.content.removeChild(this.table); // Take the table offline
+	        this.node.expand();
+	        this.content.appendChild(this.table); // Put the table online again
+	    }
 	};
 
 	/**
 	 * Collapse all nodes
 	 */
 	treemode.collapseAll = function () {
-	  if (this.node) {
-	    this.content.removeChild(this.table);  // Take the table offline
-	    this.node.collapse();
-	    this.content.appendChild(this.table);  // Put the table online again
-	  }
+	    if (this.node) {
+	        this.content.removeChild(this.table); // Take the table offline
+	        this.node.collapse();
+	        this.content.appendChild(this.table); // Put the table online again
+	    }
 	};
 
 	/**
@@ -645,20 +670,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._onAction = function (action, params) {
-	  // add an action to the history
-	  if (this.history) {
-	    this.history.add(action, params);
-	  }
+	    // add an action to the history
+	    if (this.history) {
+	        this.history.add(action, params);
+	    }
 
-	  // trigger the onChange callback
-	  if (this.options.change) {
-	    try {
-	      this.options.change();
+	    // trigger the onChange callback
+	    if (this.options.change) {
+	        try {
+	            this.options.change();
+	        } catch (err) {
+	            util.log('Error in change callback: ', err);
+	        }
 	    }
-	    catch (err) {
-	      util.log('Error in change callback: ', err);
-	    }
-	  }
 	};
 
 	/**
@@ -667,55 +691,99 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Number} mouseY  Absolute mouse position in pixels
 	 */
 	treemode.startAutoScroll = function (mouseY) {
-	  var me = this;
-	  var content = this.content;
-	  var top = util.getAbsoluteTop(content);
-	  var height = content.clientHeight;
-	  var bottom = top + height;
-	  var margin = 24;
-	  var interval = 50; // ms
+	    var me = this;
+	    var content = this.content;
+	    var top = util.getAbsoluteTop(content);
+	    var height = content.clientHeight;
+	    var bottom = top + height;
+	    var margin = 24;
+	    var interval = 50; // ms
 
-	  if ((mouseY < top + margin) && content.scrollTop > 0) {
-	    this.autoScrollStep = ((top + margin) - mouseY) / 3;
-	  }
-	  else if (mouseY > bottom - margin &&
-	      height + content.scrollTop < content.scrollHeight) {
-	    this.autoScrollStep = ((bottom - margin) - mouseY) / 3;
-	  }
-	  else {
-	    this.autoScrollStep = undefined;
-	  }
-
-	  if (this.autoScrollStep) {
-	    if (!this.autoScrollTimer) {
-	      this.autoScrollTimer = setInterval(function () {
-	        if (me.autoScrollStep) {
-	          content.scrollTop -= me.autoScrollStep;
-	        }
-	        else {
-	          me.stopAutoScroll();
-	        }
-	      }, interval);
+	    if ((mouseY < top + margin) && content.scrollTop > 0) {
+	        this.autoScrollStep = ((top + margin) - mouseY) / 3;
+	    } else if (mouseY > bottom - margin &&
+	        height + content.scrollTop < content.scrollHeight) {
+	        this.autoScrollStep = ((bottom - margin) - mouseY) / 3;
+	    } else {
+	        this.autoScrollStep = undefined;
 	    }
-	  }
-	  else {
-	    this.stopAutoScroll();
-	  }
+
+	    if (this.autoScrollStep) {
+	        if (!this.autoScrollTimer) {
+	            this.autoScrollTimer = setInterval(function () {
+	                if (me.autoScrollStep) {
+	                    content.scrollTop -= me.autoScrollStep;
+	                } else {
+	                    me.stopAutoScroll();
+	                }
+	            }, interval);
+	        }
+	    } else {
+	        this.stopAutoScroll();
+	    }
 	};
 
 	/**
 	 * Stop auto scrolling. Only applicable when scrolling
 	 */
 	treemode.stopAutoScroll = function () {
-	  if (this.autoScrollTimer) {
-	    clearTimeout(this.autoScrollTimer);
-	    delete this.autoScrollTimer;
-	  }
-	  if (this.autoScrollStep) {
-	    delete this.autoScrollStep;
-	  }
+	    if (this.autoScrollTimer) {
+	        clearTimeout(this.autoScrollTimer);
+	        delete this.autoScrollTimer;
+	    }
+	    if (this.autoScrollStep) {
+	        delete this.autoScrollStep;
+	    }
 	};
 
+	treemode.setChecked = function (node) {
+	    //console.log("Set checked!!!!!!!!!!!!!!");
+	    var o = {},
+	        key, value;
+	    var curr = node;
+
+	    // dummy {key:value} pair
+	    key = node.field || node.index;
+	    value = node.getValue();
+	    o[key] = value;
+
+	    var path = [];
+	    var output = o;
+	    if (!node.parent) { //check on root node, select the entire tree
+	        path = [];
+	        output = value;
+	    } else {
+	        while (node.parent.parent) { // build the path of the current node
+	            var par = node.parent;
+	            var parKey = par.field || par.index;
+	            path.push(parKey);
+	            // wrap the output with parent's key, add one more step to path
+	            var p = {};
+	            p[parKey] = output;
+	            output = p;
+	            node = node.parent;
+	        }
+	        path.unshift(key); // push the current node's key/index
+	        //console.log(path.reverse());
+	    }
+
+
+	    if (curr.dom.checkbox.checked) { // if checking the checkbox
+	        this.checked = util.extend(this.checked, output);
+	    } else {
+	        this.checked = util.deleteNested(this.checked, path.reverse());
+	        console.log(this.checked);
+	    }
+	};
+
+	treemode.getChecked = function () {
+	    // remove focus from currently edited node
+	    //if (focusNode) {
+	    //  focusNode.blur();
+	    //}
+
+	    return this.checked;
+	};
 
 	/**
 	 * Set the focus to an element in the editor, set text selection, and
@@ -727,20 +795,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                            {Number} scrollTop            Scroll position
 	 */
 	treemode.setSelection = function (selection) {
-	  if (!selection) {
-	    return;
-	  }
+	    if (!selection) {
+	        return;
+	    }
 
-	  if ('scrollTop' in selection && this.content) {
-	    // TODO: animated scroll
-	    this.content.scrollTop = selection.scrollTop;
-	  }
-	  if (selection.range) {
-	    util.setSelectionOffset(selection.range);
-	  }
-	  if (selection.dom) {
-	    selection.dom.focus();
-	  }
+	    if ('scrollTop' in selection && this.content) {
+	        // TODO: animated scroll
+	        this.content.scrollTop = selection.scrollTop;
+	    }
+	    if (selection.range) {
+	        util.setSelectionOffset(selection.range);
+	    }
+	    if (selection.dom) {
+	        selection.dom.focus();
+	    }
 	};
 
 	/**
@@ -752,11 +820,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                            {Number} scrollTop            Scroll position
 	 */
 	treemode.getSelection = function () {
-	  return {
-	    dom: domFocus,
-	    scrollTop: this.content ? this.content.scrollTop : 0,
-	    range: util.getSelectionOffset()
-	  };
+	    return {
+	        dom: domFocus,
+	        scrollTop: this.content ? this.content.scrollTop : 0,
+	        range: util.getSelectionOffset()
+	    };
 	};
 
 	/**
@@ -769,50 +837,48 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                                         when not.
 	 */
 	treemode.scrollTo = function (top, callback) {
-	  var content = this.content;
-	  if (content) {
-	    var editor = this;
-	    // cancel any running animation
-	    if (editor.animateTimeout) {
-	      clearTimeout(editor.animateTimeout);
-	      delete editor.animateTimeout;
-	    }
-	    if (editor.animateCallback) {
-	      editor.animateCallback(false);
-	      delete editor.animateCallback;
-	    }
-
-	    // calculate final scroll position
-	    var height = content.clientHeight;
-	    var bottom = content.scrollHeight - height;
-	    var finalScrollTop = Math.min(Math.max(top - height / 4, 0), bottom);
-
-	    // animate towards the new scroll position
-	    var animate = function () {
-	      var scrollTop = content.scrollTop;
-	      var diff = (finalScrollTop - scrollTop);
-	      if (Math.abs(diff) > 3) {
-	        content.scrollTop += diff / 3;
-	        editor.animateCallback = callback;
-	        editor.animateTimeout = setTimeout(animate, 50);
-	      }
-	      else {
-	        // finished
-	        if (callback) {
-	          callback(true);
+	    var content = this.content;
+	    if (content) {
+	        var editor = this;
+	        // cancel any running animation
+	        if (editor.animateTimeout) {
+	            clearTimeout(editor.animateTimeout);
+	            delete editor.animateTimeout;
 	        }
-	        content.scrollTop = finalScrollTop;
-	        delete editor.animateTimeout;
-	        delete editor.animateCallback;
-	      }
-	    };
-	    animate();
-	  }
-	  else {
-	    if (callback) {
-	      callback(false);
+	        if (editor.animateCallback) {
+	            editor.animateCallback(false);
+	            delete editor.animateCallback;
+	        }
+
+	        // calculate final scroll position
+	        var height = content.clientHeight;
+	        var bottom = content.scrollHeight - height;
+	        var finalScrollTop = Math.min(Math.max(top - height / 4, 0), bottom);
+
+	        // animate towards the new scroll position
+	        var animate = function () {
+	            var scrollTop = content.scrollTop;
+	            var diff = (finalScrollTop - scrollTop);
+	            if (Math.abs(diff) > 3) {
+	                content.scrollTop += diff / 3;
+	                editor.animateCallback = callback;
+	                editor.animateTimeout = setTimeout(animate, 50);
+	            } else {
+	                // finished
+	                if (callback) {
+	                    callback(true);
+	                }
+	                content.scrollTop = finalScrollTop;
+	                delete editor.animateTimeout;
+	                delete editor.animateCallback;
+	            }
+	        };
+	        animate();
+	    } else {
+	        if (callback) {
+	            callback(false);
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -820,109 +886,109 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._createFrame = function () {
-	  // create the frame
-	  this.frame = document.createElement('div');
-	  this.frame.className = 'jsoneditor';
-	  this.container.appendChild(this.frame);
+	    // create the frame
+	    this.frame = document.createElement('div');
+	    this.frame.className = 'jsoneditor';
+	    this.container.appendChild(this.frame);
 
-	  // create one global event listener to handle all events from all nodes
-	  var editor = this;
-	  function onEvent(event) {
-	    editor._onEvent(event);
-	  }
-	  this.frame.onclick = function (event) {
-	    var target = event.target;// || event.srcElement;
+	    // create one global event listener to handle all events from all nodes
+	    var editor = this;
 
-	    onEvent(event);
-
-	    // prevent default submit action of buttons when editor is located
-	    // inside a form
-	    if (target.nodeName == 'BUTTON') {
-	      event.preventDefault();
+	    function onEvent(event) {
+	        editor._onEvent(event);
 	    }
-	  };
-	  this.frame.oninput = onEvent;
-	  this.frame.onchange = onEvent;
-	  this.frame.onkeydown = onEvent;
-	  this.frame.onkeyup = onEvent;
-	  this.frame.oncut = onEvent;
-	  this.frame.onpaste = onEvent;
-	  this.frame.onmousedown = onEvent;
-	  this.frame.onmouseup = onEvent;
-	  this.frame.onmouseover = onEvent;
-	  this.frame.onmouseout = onEvent;
-	  // Note: focus and blur events do not propagate, therefore they defined
-	  // using an eventListener with useCapture=true
-	  // see http://www.quirksmode.org/blog/archives/2008/04/delegating_the.html
-	  util.addEventListener(this.frame, 'focus', onEvent, true);
-	  util.addEventListener(this.frame, 'blur', onEvent, true);
-	  this.frame.onfocusin = onEvent;  // for IE
-	  this.frame.onfocusout = onEvent; // for IE
+	    this.frame.onclick = function (event) {
+	        var target = event.target; // || event.srcElement;
 
-	  // create menu
-	  this.menu = document.createElement('div');
-	  this.menu.className = 'menu';
-	  this.frame.appendChild(this.menu);
+	        onEvent(event);
 
-	  // create expand all button
-	  var expandAll = document.createElement('button');
-	  expandAll.className = 'expand-all';
-	  expandAll.title = 'Expand all fields';
-	  expandAll.onclick = function () {
-	    editor.expandAll();
-	  };
-	  this.menu.appendChild(expandAll);
-
-	  // create expand all button
-	  var collapseAll = document.createElement('button');
-	  collapseAll.title = 'Collapse all fields';
-	  collapseAll.className = 'collapse-all';
-	  collapseAll.onclick = function () {
-	    editor.collapseAll();
-	  };
-	  this.menu.appendChild(collapseAll);
-
-	  // create undo/redo buttons
-	  if (this.history) {
-	    // create undo button
-	    var undo = document.createElement('button');
-	    undo.className = 'undo separator';
-	    undo.title = 'Undo last action (Ctrl+Z)';
-	    undo.onclick = function () {
-	      editor._onUndo();
+	        // prevent default submit action of buttons when editor is located
+	        // inside a form
+	        if (target.nodeName == 'BUTTON') {
+	            event.preventDefault();
+	        }
 	    };
-	    this.menu.appendChild(undo);
-	    this.dom.undo = undo;
+	    this.frame.oninput = onEvent;
+	    this.frame.onchange = onEvent;
+	    this.frame.onkeydown = onEvent;
+	    this.frame.onkeyup = onEvent;
+	    this.frame.oncut = onEvent;
+	    this.frame.onpaste = onEvent;
+	    this.frame.onmousedown = onEvent;
+	    this.frame.onmouseup = onEvent;
+	    this.frame.onmouseover = onEvent;
+	    this.frame.onmouseout = onEvent;
+	    // Note: focus and blur events do not propagate, therefore they defined
+	    // using an eventListener with useCapture=true
+	    // see http://www.quirksmode.org/blog/archives/2008/04/delegating_the.html
+	    util.addEventListener(this.frame, 'focus', onEvent, true);
+	    util.addEventListener(this.frame, 'blur', onEvent, true);
+	    this.frame.onfocusin = onEvent; // for IE
+	    this.frame.onfocusout = onEvent; // for IE
 
-	    // create redo button
-	    var redo = document.createElement('button');
-	    redo.className = 'redo';
-	    redo.title = 'Redo (Ctrl+Shift+Z)';
-	    redo.onclick = function () {
-	      editor._onRedo();
+	    // create menu
+	    this.menu = document.createElement('div');
+	    this.menu.className = 'menu';
+	    this.frame.appendChild(this.menu);
+
+	    var expandAll = document.createElement('button');
+	    expandAll.className = 'expand-all';
+	    expandAll.title = 'Expand all fields';
+	    expandAll.onclick = function () {
+	        editor.expandAll();
 	    };
-	    this.menu.appendChild(redo);
-	    this.dom.redo = redo;
+	    this.menu.appendChild(expandAll);
 
-	    // register handler for onchange of history
-	    this.history.onChange = function () {
-	      undo.disabled = !editor.history.canUndo();
-	      redo.disabled = !editor.history.canRedo();
+	    // create collapse all button
+	    var collapseAll = document.createElement('button');
+	    collapseAll.title = 'Collapse all fields';
+	    collapseAll.className = 'collapse-all';
+	    collapseAll.onclick = function () {
+	        editor.collapseAll();
 	    };
-	    this.history.onChange();
-	  }
+	    this.menu.appendChild(collapseAll);
 
-	  // create mode box
-	  if (this.options && this.options.modes && this.options.modes.length) {
-	    var modeBox = modeswitcher.create(this, this.options.modes, this.options.mode);
-	    this.menu.appendChild(modeBox);
-	    this.dom.modeBox = modeBox;
-	  }
+	    // create undo/redo buttons
+	    if (this.history) {
+	        // create undo button
+	        var undo = document.createElement('button');
+	        undo.className = 'undo separator';
+	        undo.title = 'Undo last action (Ctrl+Z)';
+	        undo.onclick = function () {
+	            editor._onUndo();
+	        };
+	        this.menu.appendChild(undo);
+	        this.dom.undo = undo;
 
-	  // create search box
-	  if (this.options.search) {
-	    this.searchBox = new SearchBox(this, this.menu);
-	  }
+	        // create redo button
+	        var redo = document.createElement('button');
+	        redo.className = 'redo';
+	        redo.title = 'Redo (Ctrl+Shift+Z)';
+	        redo.onclick = function () {
+	            editor._onRedo();
+	        };
+	        this.menu.appendChild(redo);
+	        this.dom.redo = redo;
+
+	        // register handler for onchange of history
+	        this.history.onChange = function () {
+	            undo.disabled = !editor.history.canUndo();
+	            redo.disabled = !editor.history.canRedo();
+	        };
+	        this.history.onChange();
+	    }
+
+	    // create mode box
+	    if (this.options && this.options.modes && this.options.modes.length) {
+	        var modeBox = modeswitcher.create(this, this.options.modes, this.options.mode);
+	        this.menu.appendChild(modeBox);
+	        this.dom.modeBox = modeBox;
+	    }
+
+	    // create search box
+	    if (this.options.search) {
+	        this.searchBox = new SearchBox(this, this.menu);
+	    }
 	};
 
 	/**
@@ -930,15 +996,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._onUndo = function () {
-	  if (this.history) {
-	    // undo last action
-	    this.history.undo();
+	    if (this.history) {
+	        // undo last action
+	        this.history.undo();
 
-	    // trigger change callback
-	    if (this.options.change) {
-	      this.options.change();
+	        // trigger change callback
+	        if (this.options.change) {
+	            this.options.change();
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -946,15 +1012,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._onRedo = function () {
-	  if (this.history) {
-	    // redo last action
-	    this.history.redo();
+	    if (this.history) {
+	        // redo last action
+	        this.history.redo();
 
-	    // trigger change callback
-	    if (this.options.change) {
-	      this.options.change();
+	        // trigger change callback
+	        if (this.options.change) {
+	            this.options.change();
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -963,20 +1029,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._onEvent = function (event) {
-	  var target = event.target;
+	    var target = event.target;
 
-	  if (event.type == 'keydown') {
-	    this._onKeyDown(event);
-	  }
+	    if (event.type == 'keydown') {
+	        this._onKeyDown(event);
+	    }
 
-	  if (event.type == 'focus') {
-	    domFocus = target;
-	  }
+	    if (event.type == 'focus') {
+	        domFocus = target;
+	    }
 
-	  var node = Node.getNodeFromTarget(target);
-	  if (node) {
-	    node.onEvent(event);
-	  }
+	    var node = Node.getNodeFromTarget(target);
+	    if (node) {
+	        node.onEvent(event);
+	    }
 	};
 
 	/**
@@ -985,56 +1051,53 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._onKeyDown = function (event) {
-	  var keynum = event.which || event.keyCode;
-	  var ctrlKey = event.ctrlKey;
-	  var shiftKey = event.shiftKey;
-	  var handled = false;
+	    var keynum = event.which || event.keyCode;
+	    var ctrlKey = event.ctrlKey;
+	    var shiftKey = event.shiftKey;
+	    var handled = false;
 
-	  if (keynum == 9) { // Tab or Shift+Tab
-	    setTimeout(function () {
-	      // select all text when moving focus to an editable div
-	      util.selectContentEditable(domFocus);
-	    }, 0);
-	  }
-
-	  if (this.searchBox) {
-	    if (ctrlKey && keynum == 70) { // Ctrl+F
-	      this.searchBox.dom.search.focus();
-	      this.searchBox.dom.search.select();
-	      handled = true;
+	    if (keynum == 9) { // Tab or Shift+Tab
+	        setTimeout(function () {
+	            // select all text when moving focus to an editable div
+	            util.selectContentEditable(domFocus);
+	        }, 0);
 	    }
-	    else if (keynum == 114 || (ctrlKey && keynum == 71)) { // F3 or Ctrl+G
-	      var focus = true;
-	      if (!shiftKey) {
-	        // select next search result (F3 or Ctrl+G)
-	        this.searchBox.next(focus);
-	      }
-	      else {
-	        // select previous search result (Shift+F3 or Ctrl+Shift+G)
-	        this.searchBox.previous(focus);
-	      }
 
-	      handled = true;
-	    }
-	  }
+	    if (this.searchBox) {
+	        if (ctrlKey && keynum == 70) { // Ctrl+F
+	            this.searchBox.dom.search.focus();
+	            this.searchBox.dom.search.select();
+	            handled = true;
+	        } else if (keynum == 114 || (ctrlKey && keynum == 71)) { // F3 or Ctrl+G
+	            var focus = true;
+	            if (!shiftKey) {
+	                // select next search result (F3 or Ctrl+G)
+	                this.searchBox.next(focus);
+	            } else {
+	                // select previous search result (Shift+F3 or Ctrl+Shift+G)
+	                this.searchBox.previous(focus);
+	            }
 
-	  if (this.history) {
-	    if (ctrlKey && !shiftKey && keynum == 90) { // Ctrl+Z
-	      // undo
-	      this._onUndo();
-	      handled = true;
+	            handled = true;
+	        }
 	    }
-	    else if (ctrlKey && shiftKey && keynum == 90) { // Ctrl+Shift+Z
-	      // redo
-	      this._onRedo();
-	      handled = true;
-	    }
-	  }
 
-	  if (handled) {
-	    event.preventDefault();
-	    event.stopPropagation();
-	  }
+	    if (this.history) {
+	        if (ctrlKey && !shiftKey && keynum == 90) { // Ctrl+Z
+	            // undo
+	            this._onUndo();
+	            handled = true;
+	        } else if (ctrlKey && shiftKey && keynum == 90) { // Ctrl+Shift+Z
+	            // redo
+	            this._onRedo();
+	            handled = true;
+	        }
+	    }
+
+	    if (handled) {
+	        event.preventDefault();
+	        event.stopPropagation();
+	    }
 	};
 
 	/**
@@ -1042,58 +1105,59 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	treemode._createTable = function () {
-	  var contentOuter = document.createElement('div');
-	  contentOuter.className = 'outer';
-	  this.contentOuter = contentOuter;
+	    var contentOuter = document.createElement('div');
+	    contentOuter.className = 'outer';
+	    this.contentOuter = contentOuter;
 
-	  this.content = document.createElement('div');
-	  this.content.className = 'tree';
-	  contentOuter.appendChild(this.content);
+	    this.content = document.createElement('div');
+	    this.content.className = 'tree';
+	    contentOuter.appendChild(this.content);
 
-	  this.table = document.createElement('table');
-	  this.table.className = 'tree';
-	  this.content.appendChild(this.table);
+	    this.table = document.createElement('table');
+	    this.table.className = 'tree';
+	    this.content.appendChild(this.table);
 
-	  // create colgroup where the first two columns don't have a fixed
-	  // width, and the edit columns do have a fixed width
-	  var col;
-	  this.colgroupContent = document.createElement('colgroup');
-	  if (this.options.mode === 'tree') {
+	    // create colgroup where the first two columns do have a fixed
+	    // width, and the edit columns don't have a fixed width
+	    var col;
+	    this.colgroupContent = document.createElement('colgroup');
+	    if (this.options.mode === 'tree') {
+	        col = document.createElement('col');
+	        col.width = "24px";
+	        this.colgroupContent.appendChild(col);
+	    }
 	    col = document.createElement('col');
 	    col.width = "24px";
 	    this.colgroupContent.appendChild(col);
-	  }
-	  col = document.createElement('col');
-	  col.width = "24px";
-	  this.colgroupContent.appendChild(col);
-	  col = document.createElement('col');
-	  this.colgroupContent.appendChild(col);
-	  this.table.appendChild(this.colgroupContent);
+	    col = document.createElement('col');
+	    this.colgroupContent.appendChild(col);
+	    this.table.appendChild(this.colgroupContent);
 
-	  this.tbody = document.createElement('tbody');
-	  this.table.appendChild(this.tbody);
+	    this.tbody = document.createElement('tbody');
+	    this.table.appendChild(this.tbody);
 
-	  this.frame.appendChild(contentOuter);
+	    this.frame.appendChild(contentOuter);
 	};
 
 	// define modes
-	module.exports = [
-	  {
+	module.exports = [{
 	    mode: 'tree',
 	    mixin: treemode,
 	    data: 'json'
-	  },
-	  {
+	}, {
 	    mode: 'view',
 	    mixin: treemode,
 	    data: 'json'
-	  },
-	  {
+	}, {
 	    mode: 'form',
 	    mixin: treemode,
 	    data: 'json'
-	  }
-	];
+	}, {
+	    mode: 'checkbox',
+	    mixin: treemode,
+	    data: 'json'
+	}];
+
 
 /***/ },
 /* 2 */
@@ -1448,7 +1512,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var jsonlint = __webpack_require__(12);
+	var jsonlint = __webpack_require__(19);
 
 	/**
 	 * Parse JSON using the parser built-in in the browser.
@@ -1457,16 +1521,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {JSON} json
 	 */
 	exports.parse = function parse(jsonString) {
-	  try {
-	    return JSON.parse(jsonString);
-	  }
-	  catch (err) {
-	    // try to throw a more detailed error message using validate
-	    exports.validate(jsonString);
+	    try {
+	        return JSON.parse(jsonString);
+	    } catch (err) {
+	        // try to throw a more detailed error message using validate
+	        exports.validate(jsonString);
 
-	    // rethrow the original error
-	    throw err;
-	  }
+	        // rethrow the original error
+	        throw err;
+	    }
 	};
 
 	/**
@@ -1478,123 +1541,125 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @returns {string} json
 	 */
 	exports.sanitize = function (jsString) {
-	  // escape all single and double quotes inside strings
-	  var chars = [];
-	  var i = 0;
+	    // escape all single and double quotes inside strings
+	    var chars = [];
+	    var i = 0;
 
-	  //If JSON starts with a function (characters/digits/"_-"), remove this function.
-	  //This is useful for "stripping" JSONP objects to become JSON
-	  //For example: /* some comment */ function_12321321 ( [{"a":"b"}] ); => [{"a":"b"}]
-	  var match = jsString.match(/^\s*(\/\*(.|[\r\n])*?\*\/)?\s*[\da-zA-Z_$]+\s*\(([\s\S]*)\)\s*;?\s*$/);
-	  if (match) {
-	    jsString = match[3];
-	  }
-
-	  // helper functions to get the current/prev/next character
-	  function curr () { return jsString.charAt(i);     }
-	  function next()  { return jsString.charAt(i + 1); }
-	  function prev()  { return jsString.charAt(i - 1); }
-
-	  // test whether the last non-whitespace character was a brace-open '{'
-	  function prevIsBrace() {
-	    var ii = i - 1;
-	    while (ii >= 0) {
-	      var cc = jsString.charAt(ii);
-	      if (cc === '{') {
-	        return true;
-	      }
-	      else if (cc === ' ' || cc === '\n' || cc === '\r') { // whitespace
-	        ii--;
-	      }
-	      else {
-	        return false;
-	      }
+	    //If JSON starts with a function (characters/digits/"_-"), remove this function.
+	    //This is useful for "stripping" JSONP objects to become JSON
+	    //For example: /* some comment */ function_12321321 ( [{"a":"b"}] ); => [{"a":"b"}]
+	    var match = jsString.match(/^\s*(\/\*(.|[\r\n])*?\*\/)?\s*[\da-zA-Z_$]+\s*\(([\s\S]*)\)\s*;?\s*$/);
+	    if (match) {
+	        jsString = match[3];
 	    }
-	    return false;
-	  }
 
-	  // skip a block comment '/* ... */'
-	  function skipComment () {
-	    i += 2;
-	    while (i < jsString.length && (curr() !== '*' || next() !== '/')) {
-	      i++;
+	    // helper functions to get the current/prev/next character
+	    function curr() {
+	        return jsString.charAt(i);
 	    }
-	    i += 2;
-	  }
 
-	  // parse single or double quoted string
-	  function parseString(quote) {
-	    chars.push('"');
-	    i++;
-	    var c = curr();
-	    while (i < jsString.length && c !== quote) {
-	      if (c === '"' && prev() !== '\\') {
-	        // unescaped double quote, escape it
-	        chars.push('\\');
-	      }
+	    function next() {
+	        return jsString.charAt(i + 1);
+	    }
 
-	      // handle escape character
-	      if (c === '\\') {
-	        i++;
-	        c = curr();
+	    function prev() {
+	        return jsString.charAt(i - 1);
+	    }
 
-	        // remove the escape character when followed by a single quote ', not needed
-	        if (c !== '\'') {
-	          chars.push('\\');
+	    // test whether the last non-whitespace character was a brace-open '{'
+	    function prevIsBrace() {
+	        var ii = i - 1;
+	        while (ii >= 0) {
+	            var cc = jsString.charAt(ii);
+	            if (cc === '{') {
+	                return true;
+	            } else if (cc === ' ' || cc === '\n' || cc === '\r') { // whitespace
+	                ii--;
+	            } else {
+	                return false;
+	            }
 	        }
-	      }
-	      chars.push(c);
-
-	      i++;
-	      c = curr();
-	    }
-	    if (c === quote) {
-	      chars.push('"');
-	      i++;
-	    }
-	  }
-
-	  // parse an unquoted key
-	  function parseKey() {
-	    var specialValues = ['null', 'true', 'false'];
-	    var key = '';
-	    var c = curr();
-
-	    var regexp = /[a-zA-Z_$\d]/; // letter, number, underscore, dollar character
-	    while (regexp.test(c)) {
-	      key += c;
-	      i++;
-	      c = curr();
+	        return false;
 	    }
 
-	    if (specialValues.indexOf(key) === -1) {
-	      chars.push('"' + key + '"');
+	    // skip a block comment '/* ... */'
+	    function skipComment() {
+	        i += 2;
+	        while (i < jsString.length && (curr() !== '*' || next() !== '/')) {
+	            i++;
+	        }
+	        i += 2;
 	    }
-	    else {
-	      chars.push(key);
-	    }
-	  }
 
-	  while(i < jsString.length) {
-	    var c = curr();
+	    // parse single or double quoted string
+	    function parseString(quote) {
+	        chars.push('"');
+	        i++;
+	        var c = curr();
+	        while (i < jsString.length && c !== quote) {
+	            if (c === '"' && prev() !== '\\') {
+	                // unescaped double quote, escape it
+	                chars.push('\\');
+	            }
 
-	    if (c === '/' && next() === '*') {
-	      skipComment();
-	    }
-	    else if (c === '\'' || c === '"') {
-	      parseString(c);
-	    }
-	    else if (/[a-zA-Z_$]/.test(c) && prevIsBrace()) {
-	      // an unquoted object key (like a in '{a:2}')
-	      parseKey();
-	    }
-	    else {
-	      chars.push(c);
-	      i++;
-	    }
-	  }
+	            // handle escape character
+	            if (c === '\\') {
+	                i++;
+	                c = curr();
 
-	  return chars.join('');
+	                // remove the escape character when followed by a single quote ', not needed
+	                if (c !== '\'') {
+	                    chars.push('\\');
+	                }
+	            }
+	            chars.push(c);
+
+	            i++;
+	            c = curr();
+	        }
+	        if (c === quote) {
+	            chars.push('"');
+	            i++;
+	        }
+	    }
+
+	    // parse an unquoted key
+	    function parseKey() {
+	        var specialValues = ['null', 'true', 'false'];
+	        var key = '';
+	        var c = curr();
+
+	        var regexp = /[a-zA-Z_$\d]/; // letter, number, underscore, dollar character
+	        while (regexp.test(c)) {
+	            key += c;
+	            i++;
+	            c = curr();
+	        }
+
+	        if (specialValues.indexOf(key) === -1) {
+	            chars.push('"' + key + '"');
+	        } else {
+	            chars.push(key);
+	        }
+	    }
+
+	    while (i < jsString.length) {
+	        var c = curr();
+
+	        if (c === '/' && next() === '*') {
+	            skipComment();
+	        } else if (c === '\'' || c === '"') {
+	            parseString(c);
+	        } else if (/[a-zA-Z_$]/.test(c) && prevIsBrace()) {
+	            // an unquoted object key (like a in '{a:2}')
+	            parseKey();
+	        } else {
+	            chars.push(c);
+	            i++;
+	        }
+	    }
+
+	    return chars.join('');
 	};
 
 	/**
@@ -1605,12 +1670,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @throws Error
 	 */
 	exports.validate = function validate(jsonString) {
-	  if (typeof(jsonlint) != 'undefined') {
-	    jsonlint.parse(jsonString);
-	  }
-	  else {
-	    JSON.parse(jsonString);
-	  }
+	    if (typeof (jsonlint) != 'undefined') {
+	        jsonlint.parse(jsonString);
+	    } else {
+	        JSON.parse(jsonString);
+	    }
 	};
 
 	/**
@@ -1620,36 +1684,86 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Object} a
 	 */
 	exports.extend = function extend(a, b) {
-	  for (var prop in b) {
-	    if (b.hasOwnProperty(prop)) {
-	      a[prop] = b[prop];
+	    for (var prop in b) {
+	        if (b.hasOwnProperty(prop)) {
+	            a[prop] = b[prop];
+	        }
 	    }
-	  }
-	  return a;
+	    return a;
 	};
+
+	/**
+	 * delete a property in an object with a given path
+	 * @param {Object} obj
+	 * @param {Array} path
+	 * @return {Object} root
+	 */
+	exports.deleteNested = function (obj /*, path*/ ) {
+	    var root = obj;
+	    var args = arguments[1];
+
+	    // when root is unchecked, set treemode.checked to {}
+	    if (args.length === 0) return {};
+
+	    // first find that key, then delete it
+	    for (var i = 0, n = args.length - 1; i < n; i++) {
+	        //console.log(obj);
+	        obj = obj[args[i]];
+	    }
+	    delete obj[args[i]];
+	    // second get rid of the empty contents
+
+	    return root;
+	};
+
+	function clearEmpty(obj) { // not checking {} as arg for purpose.
+	    for (var prop in obj) {
+	        if (obj.hasOwnProperty(prop)) {
+	            // delete empty properties
+	            if (typeof obj[prop] === 'object' && obj[prop] !== null) {
+	                if (Object.getOwnPropertyNames(obj[prop]).length === 0) {
+	                    delete obj[prop];
+	                }
+	                clearEmpty(obj[prop]);
+	            }
+	        }
+	    }
+	}
+
+	var x = {
+	    test: {
+	        y:2,
+	        empty:{
+	            test:{}
+	        }
+	    },
+	    x: 1
+	};
+	clearEmpty(x);
+	console.log(x);
 
 	/**
 	 * Remove all properties from object a
 	 * @param {Object} a
 	 * @return {Object} a
 	 */
-	exports.clear = function clear (a) {
-	  for (var prop in a) {
-	    if (a.hasOwnProperty(prop)) {
-	      delete a[prop];
+	exports.clear = function clear(a) {
+	    for (var prop in a) {
+	        if (a.hasOwnProperty(prop)) {
+	            delete a[prop];
+	        }
 	    }
-	  }
-	  return a;
+	    return a;
 	};
 
 	/**
 	 * Output text to the console, if console is available
 	 * @param {...*} args
 	 */
-	exports.log = function log (args) {
-	  if (typeof console !== 'undefined' && typeof console.log === 'function') {
-	    console.log.apply(console, arguments);
-	  }
+	exports.log = function log(args) {
+	    if (typeof console !== 'undefined' && typeof console.log === 'function') {
+	        console.log.apply(console, arguments);
+	    }
 	};
 
 	/**
@@ -1657,30 +1771,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {*} object
 	 * @return {String} type
 	 */
-	exports.type = function type (object) {
-	  if (object === null) {
-	    return 'null';
-	  }
-	  if (object === undefined) {
-	    return 'undefined';
-	  }
-	  if ((object instanceof Number) || (typeof object === 'number')) {
-	    return 'number';
-	  }
-	  if ((object instanceof String) || (typeof object === 'string')) {
-	    return 'string';
-	  }
-	  if ((object instanceof Boolean) || (typeof object === 'boolean')) {
-	    return 'boolean';
-	  }
-	  if ((object instanceof RegExp) || (typeof object === 'regexp')) {
-	    return 'regexp';
-	  }
-	  if (exports.isArray(object)) {
-	    return 'array';
-	  }
+	exports.type = function type(object) {
+	    if (object === null) {
+	        return 'null';
+	    }
+	    if (object === undefined) {
+	        return 'undefined';
+	    }
+	    if ((object instanceof Number) || (typeof object === 'number')) {
+	        return 'number';
+	    }
+	    if ((object instanceof String) || (typeof object === 'string')) {
+	        return 'string';
+	    }
+	    if ((object instanceof Boolean) || (typeof object === 'boolean')) {
+	        return 'boolean';
+	    }
+	    if ((object instanceof RegExp) || (typeof object === 'regexp')) {
+	        return 'regexp';
+	    }
+	    if (exports.isArray(object)) {
+	        return 'array';
+	    }
 
-	  return 'object';
+	    return 'object';
 	};
 
 	/**
@@ -1689,9 +1803,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String} text
 	 */
 	var isUrlRegex = /^https?:\/\/\S+$/;
-	exports.isUrl = function isUrl (text) {
-	  return (typeof text == 'string' || text instanceof String) &&
-	      isUrlRegex.test(text);
+	exports.isUrl = function isUrl(text) {
+	    return (typeof text == 'string' || text instanceof String) &&
+	        isUrlRegex.test(text);
 	};
 
 	/**
@@ -1700,7 +1814,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @returns {boolean} returns true when obj is an array
 	 */
 	exports.isArray = function (obj) {
-	  return Object.prototype.toString.call(obj) === '[object Array]';
+	    return Object.prototype.toString.call(obj) === '[object Array]';
 	};
 
 	/**
@@ -1710,8 +1824,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                          in the browser page.
 	 */
 	exports.getAbsoluteLeft = function getAbsoluteLeft(elem) {
-	  var rect = elem.getBoundingClientRect();
-	  return rect.left + window.pageXOffset || document.scrollLeft || 0;
+	    var rect = elem.getBoundingClientRect();
+	    return rect.left + window.pageXOffset || document.scrollLeft || 0;
 	};
 
 	/**
@@ -1721,8 +1835,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                          in the browser page.
 	 */
 	exports.getAbsoluteTop = function getAbsoluteTop(elem) {
-	  var rect = elem.getBoundingClientRect();
-	  return rect.top + window.pageYOffset || document.scrollTop || 0;
+	    var rect = elem.getBoundingClientRect();
+	    return rect.top + window.pageYOffset || document.scrollTop || 0;
 	};
 
 	/**
@@ -1731,11 +1845,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String} className
 	 */
 	exports.addClassName = function addClassName(elem, className) {
-	  var classes = elem.className.split(' ');
-	  if (classes.indexOf(className) == -1) {
-	    classes.push(className); // add the class to the array
-	    elem.className = classes.join(' ');
-	  }
+	    var classes = elem.className.split(' ');
+	    if (classes.indexOf(className) == -1) {
+	        classes.push(className); // add the class to the array
+	        elem.className = classes.join(' ');
+	    }
 	};
 
 	/**
@@ -1744,12 +1858,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String} className
 	 */
 	exports.removeClassName = function removeClassName(elem, className) {
-	  var classes = elem.className.split(' ');
-	  var index = classes.indexOf(className);
-	  if (index != -1) {
-	    classes.splice(index, 1); // remove the class from the array
-	    elem.className = classes.join(' ');
-	  }
+	    var classes = elem.className.split(' ');
+	    var index = classes.indexOf(className);
+	    if (index != -1) {
+	        classes.splice(index, 1); // remove the class from the array
+	        elem.className = classes.join(' ');
+	    }
 	};
 
 	/**
@@ -1758,30 +1872,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Element} divElement
 	 */
 	exports.stripFormatting = function stripFormatting(divElement) {
-	  var childs = divElement.childNodes;
-	  for (var i = 0, iMax = childs.length; i < iMax; i++) {
-	    var child = childs[i];
+	    var childs = divElement.childNodes;
+	    for (var i = 0, iMax = childs.length; i < iMax; i++) {
+	        var child = childs[i];
 
-	    // remove the style
-	    if (child.style) {
-	      // TODO: test if child.attributes does contain style
-	      child.removeAttribute('style');
-	    }
-
-	    // remove all attributes
-	    var attributes = child.attributes;
-	    if (attributes) {
-	      for (var j = attributes.length - 1; j >= 0; j--) {
-	        var attribute = attributes[j];
-	        if (attribute.specified === true) {
-	          child.removeAttribute(attribute.name);
+	        // remove the style
+	        if (child.style) {
+	            // TODO: test if child.attributes does contain style
+	            child.removeAttribute('style');
 	        }
-	      }
-	    }
 
-	    // recursively strip childs
-	    exports.stripFormatting(child);
-	  }
+	        // remove all attributes
+	        var attributes = child.attributes;
+	        if (attributes) {
+	            for (var j = attributes.length - 1; j >= 0; j--) {
+	                var attribute = attributes[j];
+	                if (attribute.specified === true) {
+	                    child.removeAttribute(attribute.name);
+	                }
+	            }
+	        }
+
+	        // recursively strip childs
+	        exports.stripFormatting(child);
+	    }
 	};
 
 	/**
@@ -1792,15 +1906,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Element} contentEditableElement   A content editable div
 	 */
 	exports.setEndOfContentEditable = function setEndOfContentEditable(contentEditableElement) {
-	  var range, selection;
-	  if(document.createRange) {
-	    range = document.createRange();//Create a range (a range is a like the selection but invisible)
-	    range.selectNodeContents(contentEditableElement);//Select the entire contents of the element with the range
-	    range.collapse(false);//collapse the range to the end point. false means collapse to end rather than the start
-	    selection = window.getSelection();//get the selection object (allows you to change selection)
-	    selection.removeAllRanges();//remove any selections already made
-	    selection.addRange(range);//make the range you have just created the visible selection
-	  }
+	    var range, selection;
+	    if (document.createRange) {
+	        range = document.createRange(); //Create a range (a range is a like the selection but invisible)
+	        range.selectNodeContents(contentEditableElement); //Select the entire contents of the element with the range
+	        range.collapse(false); //collapse the range to the end point. false means collapse to end rather than the start
+	        selection = window.getSelection(); //get the selection object (allows you to change selection)
+	        selection.removeAllRanges(); //remove any selections already made
+	        selection.addRange(range); //make the range you have just created the visible selection
+	    }
 	};
 
 	/**
@@ -1809,18 +1923,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Element} contentEditableElement   A content editable div
 	 */
 	exports.selectContentEditable = function selectContentEditable(contentEditableElement) {
-	  if (!contentEditableElement || contentEditableElement.nodeName != 'DIV') {
-	    return;
-	  }
+	    if (!contentEditableElement || contentEditableElement.nodeName != 'DIV') {
+	        return;
+	    }
 
-	  var sel, range;
-	  if (window.getSelection && document.createRange) {
-	    range = document.createRange();
-	    range.selectNodeContents(contentEditableElement);
-	    sel = window.getSelection();
-	    sel.removeAllRanges();
-	    sel.addRange(range);
-	  }
+	    var sel, range;
+	    if (window.getSelection && document.createRange) {
+	        range = document.createRange();
+	        range.selectNodeContents(contentEditableElement);
+	        sel = window.getSelection();
+	        sel.removeAllRanges();
+	        sel.addRange(range);
+	    }
 	};
 
 	/**
@@ -1829,13 +1943,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Range | TextRange | null} range
 	 */
 	exports.getSelection = function getSelection() {
-	  if (window.getSelection) {
-	    var sel = window.getSelection();
-	    if (sel.getRangeAt && sel.rangeCount) {
-	      return sel.getRangeAt(0);
+	    if (window.getSelection) {
+	        var sel = window.getSelection();
+	        if (sel.getRangeAt && sel.rangeCount) {
+	            return sel.getRangeAt(0);
+	        }
 	    }
-	  }
-	  return null;
+	    return null;
 	};
 
 	/**
@@ -1844,13 +1958,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Range | TextRange | null} range
 	 */
 	exports.setSelection = function setSelection(range) {
-	  if (range) {
-	    if (window.getSelection) {
-	      var sel = window.getSelection();
-	      sel.removeAllRanges();
-	      sel.addRange(range);
+	    if (range) {
+	        if (window.getSelection) {
+	            var sel = window.getSelection();
+	            sel.removeAllRanges();
+	            sel.addRange(range);
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -1863,18 +1977,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                          Returns null if no text selection is found
 	 */
 	exports.getSelectionOffset = function getSelectionOffset() {
-	  var range = exports.getSelection();
+	    var range = exports.getSelection();
 
-	  if (range && 'startOffset' in range && 'endOffset' in range &&
-	      range.startContainer && (range.startContainer == range.endContainer)) {
-	    return {
-	      startOffset: range.startOffset,
-	      endOffset: range.endOffset,
-	      container: range.startContainer.parentNode
-	    };
-	  }
+	    if (range && 'startOffset' in range && 'endOffset' in range &&
+	        range.startContainer && (range.startContainer == range.endContainer)) {
+	        return {
+	            startOffset: range.startOffset,
+	            endOffset: range.endOffset,
+	            container: range.startContainer.parentNode
+	        };
+	    }
 
-	  return null;
+	    return null;
 	};
 
 	/**
@@ -1885,18 +1999,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                              {Number} endOffset
 	 */
 	exports.setSelectionOffset = function setSelectionOffset(params) {
-	  if (document.createRange && window.getSelection) {
-	    var selection = window.getSelection();
-	    if(selection) {
-	      var range = document.createRange();
-	      // TODO: do not suppose that the first child of the container is a textnode,
-	      //       but recursively find the textnodes
-	      range.setStart(params.container.firstChild, params.startOffset);
-	      range.setEnd(params.container.firstChild, params.endOffset);
+	    if (document.createRange && window.getSelection) {
+	        var selection = window.getSelection();
+	        if (selection) {
+	            var range = document.createRange();
+	            // TODO: do not suppose that the first child of the container is a textnode,
+	            //       but recursively find the textnodes
+	            range.setStart(params.container.firstChild, params.startOffset);
+	            range.setEnd(params.container.firstChild, params.endOffset);
 
-	      exports.setSelection(range);
+	            exports.setSelection(range);
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -1906,68 +2020,65 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {String} innerText
 	 */
 	exports.getInnerText = function getInnerText(element, buffer) {
-	  var first = (buffer == undefined);
-	  if (first) {
-	    buffer = {
-	      'text': '',
-	      'flush': function () {
-	        var text = this.text;
-	        this.text = '';
-	        return text;
-	      },
-	      'set': function (text) {
-	        this.text = text;
-	      }
-	    };
-	  }
+	    var first = (buffer == undefined);
+	    if (first) {
+	        buffer = {
+	            'text': '',
+	            'flush': function () {
+	                var text = this.text;
+	                this.text = '';
+	                return text;
+	            },
+	            'set': function (text) {
+	                this.text = text;
+	            }
+	        };
+	    }
 
-	  // text node
-	  if (element.nodeValue) {
-	    return buffer.flush() + element.nodeValue;
-	  }
+	    // text node
+	    if (element.nodeValue) {
+	        return buffer.flush() + element.nodeValue;
+	    }
 
-	  // divs or other HTML elements
-	  if (element.hasChildNodes()) {
-	    var childNodes = element.childNodes;
-	    var innerText = '';
+	    // divs or other HTML elements
+	    if (element.hasChildNodes()) {
+	        var childNodes = element.childNodes;
+	        var innerText = '';
 
-	    for (var i = 0, iMax = childNodes.length; i < iMax; i++) {
-	      var child = childNodes[i];
+	        for (var i = 0, iMax = childNodes.length; i < iMax; i++) {
+	            var child = childNodes[i];
 
-	      if (child.nodeName == 'DIV' || child.nodeName == 'P') {
-	        var prevChild = childNodes[i - 1];
-	        var prevName = prevChild ? prevChild.nodeName : undefined;
-	        if (prevName && prevName != 'DIV' && prevName != 'P' && prevName != 'BR') {
-	          innerText += '\n';
-	          buffer.flush();
+	            if (child.nodeName == 'DIV' || child.nodeName == 'P') {
+	                var prevChild = childNodes[i - 1];
+	                var prevName = prevChild ? prevChild.nodeName : undefined;
+	                if (prevName && prevName != 'DIV' && prevName != 'P' && prevName != 'BR') {
+	                    innerText += '\n';
+	                    buffer.flush();
+	                }
+	                innerText += exports.getInnerText(child, buffer);
+	                buffer.set('\n');
+	            } else if (child.nodeName == 'BR') {
+	                innerText += buffer.flush();
+	                buffer.set('\n');
+	            } else {
+	                innerText += exports.getInnerText(child, buffer);
+	            }
 	        }
-	        innerText += exports.getInnerText(child, buffer);
-	        buffer.set('\n');
-	      }
-	      else if (child.nodeName == 'BR') {
-	        innerText += buffer.flush();
-	        buffer.set('\n');
-	      }
-	      else {
-	        innerText += exports.getInnerText(child, buffer);
-	      }
+
+	        return innerText;
+	    } else {
+	        if (element.nodeName == 'P' && exports.getInternetExplorerVersion() != -1) {
+	            // On Internet Explorer, a <p> with hasChildNodes()==false is
+	            // rendered with a new line. Note that a <p> with
+	            // hasChildNodes()==true is rendered without a new line
+	            // Other browsers always ensure there is a <br> inside the <p>,
+	            // and if not, the <p> does not render a new line
+	            return buffer.flush();
+	        }
 	    }
 
-	    return innerText;
-	  }
-	  else {
-	    if (element.nodeName == 'P' && exports.getInternetExplorerVersion() != -1) {
-	      // On Internet Explorer, a <p> with hasChildNodes()==false is
-	      // rendered with a new line. Note that a <p> with
-	      // hasChildNodes()==true is rendered without a new line
-	      // Other browsers always ensure there is a <br> inside the <p>,
-	      // and if not, the <p> does not render a new line
-	      return buffer.flush();
-	    }
-	  }
-
-	  // br or unknown
-	  return '';
+	    // br or unknown
+	    return '';
 	};
 
 	/**
@@ -1977,29 +2088,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Number} Internet Explorer version, or -1 in case of an other browser
 	 */
 	exports.getInternetExplorerVersion = function getInternetExplorerVersion() {
-	  if (_ieVersion == -1) {
-	    var rv = -1; // Return value assumes failure.
-	    if (navigator.appName == 'Microsoft Internet Explorer')
-	    {
-	      var ua = navigator.userAgent;
-	      var re  = new RegExp("MSIE ([0-9]{1,}[\.0-9]{0,})");
-	      if (re.exec(ua) != null) {
-	        rv = parseFloat( RegExp.$1 );
-	      }
+	    if (_ieVersion == -1) {
+	        var rv = -1; // Return value assumes failure.
+	        if (navigator.appName == 'Microsoft Internet Explorer') {
+	            var ua = navigator.userAgent;
+	            var re = new RegExp("MSIE ([0-9]{1,}[\.0-9]{0,})");
+	            if (re.exec(ua) != null) {
+	                rv = parseFloat(RegExp.$1);
+	            }
+	        }
+
+	        _ieVersion = rv;
 	    }
 
-	    _ieVersion = rv;
-	  }
-
-	  return _ieVersion;
+	    return _ieVersion;
 	};
 
 	/**
 	 * Test whether the current browser is Firefox
 	 * @returns {boolean} isFirefox
 	 */
-	exports.isFirefox = function isFirefox () {
-	  return (navigator.userAgent.indexOf("Firefox") != -1);
+	exports.isFirefox = function isFirefox() {
+	    return (navigator.userAgent.indexOf("Firefox") != -1);
 	};
 
 	/**
@@ -2019,24 +2129,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {function}   the created event listener
 	 */
 	exports.addEventListener = function addEventListener(element, action, listener, useCapture) {
-	  if (element.addEventListener) {
-	    if (useCapture === undefined)
-	      useCapture = false;
+	    if (element.addEventListener) {
+	        if (useCapture === undefined)
+	            useCapture = false;
 
-	    if (action === "mousewheel" && exports.isFirefox()) {
-	      action = "DOMMouseScroll";  // For Firefox
+	        if (action === "mousewheel" && exports.isFirefox()) {
+	            action = "DOMMouseScroll"; // For Firefox
+	        }
+
+	        element.addEventListener(action, listener, useCapture);
+	        return listener;
+	    } else if (element.attachEvent) {
+	        // Old IE browsers
+	        var f = function () {
+	            return listener.call(element, window.event);
+	        };
+	        element.attachEvent("on" + action, f);
+	        return f;
 	    }
-
-	    element.addEventListener(action, listener, useCapture);
-	    return listener;
-	  } else if (element.attachEvent) {
-	    // Old IE browsers
-	    var f = function () {
-	      return listener.call(element, window.event);
-	    };
-	    element.attachEvent("on" + action, f);
-	    return f;
-	  }
 	};
 
 	/**
@@ -2047,19 +2157,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {boolean}  [useCapture]   false by default
 	 */
 	exports.removeEventListener = function removeEventListener(element, action, listener, useCapture) {
-	  if (element.removeEventListener) {
-	    if (useCapture === undefined)
-	      useCapture = false;
+	    if (element.removeEventListener) {
+	        if (useCapture === undefined)
+	            useCapture = false;
 
-	    if (action === "mousewheel" && exports.isFirefox()) {
-	      action = "DOMMouseScroll";  // For Firefox
+	        if (action === "mousewheel" && exports.isFirefox()) {
+	            action = "DOMMouseScroll"; // For Firefox
+	        }
+
+	        element.removeEventListener(action, listener, useCapture);
+	    } else if (element.detachEvent) {
+	        // Old IE browsers
+	        element.detachEvent("on" + action, listener);
 	    }
-
-	    element.removeEventListener(action, listener, useCapture);
-	  } else if (element.detachEvent) {
-	    // Old IE browsers
-	    element.detachEvent("on" + action, listener);
-	  }
 	};
 
 
@@ -2694,20 +2804,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                          {String}  type  Can have values 'auto', 'array',
 	 *                                          'object', or 'string'.
 	 */
-	function Node (editor, params) {
-	  /** @type {TreeEditor} */
-	  this.editor = editor;
-	  this.dom = {};
-	  this.expanded = false;
+	function Node(editor, params) {
+	    /** @type {TreeEditor} */
+	    this.editor = editor;
+	    this.dom = {};
+	    this.expanded = false;
+	    this._checkedChildren = 0;
+	    this._uncheckedChildren = 0;
 
-	  if(params && (params instanceof Object)) {
-	    this.setField(params.field, params.fieldEditable);
-	    this.setValue(params.value, params.type);
-	  }
-	  else {
-	    this.setField('');
-	    this.setValue(null);
-	  }
+	    if (params && (params instanceof Object)) {
+	        this.setField(params.field, params.fieldEditable);
+	        this.setValue(params.value, params.type);
+	    } else {
+	        this.setField('');
+	        this.setValue(null);
+	    }
 	}
 
 	/**
@@ -2715,32 +2826,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._updateEditability = function () {
-	  this.editable = {
-	    field: true,
-	    value: true
-	  };
+	    this.editable = {
+	        field: true,
+	        value: true
+	    };
 
-	  if (this.editor) {
-	    this.editable.field = this.editor.options.mode === 'tree';
-	    this.editable.value = this.editor.options.mode !== 'view';
+	    if (this.editor) {
+	        this.editable.field = this.editor.options.mode === 'tree';
+	        this.editable.value = this.editor.options.mode !== 'view';
 
-	    if (this.editor.options.mode === 'tree' && (typeof this.editor.options.editable === 'function')) {
-	      var editable = this.editor.options.editable({
-	        field: this.field,
-	        value: this.value,
-	        path: this.path()
-	      });
+	        if (this.editor.options.mode === 'tree' && (typeof this.editor.options.editable === 'function')) {
+	            var editable = this.editor.options.editable({
+	                field: this.field,
+	                value: this.value,
+	                path: this.path()
+	            });
 
-	      if (typeof editable === 'boolean') {
-	        this.editable.field = editable;
-	        this.editable.value = editable;
-	      }
-	      else {
-	        if (typeof editable.field === 'boolean') this.editable.field = editable.field;
-	        if (typeof editable.value === 'boolean') this.editable.value = editable.value;
-	      }
+	            if (typeof editable === 'boolean') {
+	                this.editable.field = editable;
+	                this.editable.value = editable;
+	            } else {
+	                if (typeof editable.field === 'boolean') this.editable.field = editable.field;
+	                if (typeof editable.value === 'boolean') this.editable.value = editable.value;
+	            }
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -2748,24 +2858,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {String[]} Array containing the path to this node
 	 */
 	Node.prototype.path = function () {
-	  var node = this;
-	  var path = [];
-	  while (node) {
-	    var field = node.field != undefined ? node.field : node.index;
-	    if (field !== undefined) {
-	      path.unshift(field);
+	    var node = this;
+	    var path = [];
+	    while (node) {
+	        var field = node.field != undefined ? node.field : node.index;
+	        if (field !== undefined) {
+	            path.unshift(field);
+	        }
+	        node = node.parent;
 	    }
-	    node = node.parent;
-	  }
-	  return path;
+	    return path;
 	};
 
 	/**
 	 * Set parent node
 	 * @param {Node} parent
 	 */
-	Node.prototype.setParent = function(parent) {
-	  this.parent = parent;
+	Node.prototype.setParent = function (parent) {
+	    this.parent = parent;
+	    this.parent._uncheckedChildren = this.parent.childs.length;
 	};
 
 	/**
@@ -2773,21 +2884,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String}  field
 	 * @param {boolean} [fieldEditable]
 	 */
-	Node.prototype.setField = function(field, fieldEditable) {
-	  this.field = field;
-	  this.fieldEditable = (fieldEditable === true);
+	Node.prototype.setField = function (field, fieldEditable) {
+	    this.field = field;
+	    this.fieldEditable = (fieldEditable === true);
 	};
 
 	/**
 	 * Get field
 	 * @return {String}
 	 */
-	Node.prototype.getField = function() {
-	  if (this.field === undefined) {
-	    this._getDomField();
-	  }
+	Node.prototype.getField = function () {
+	    if (this.field === undefined) {
+	        this._getDomField();
+	    }
 
-	  return this.field;
+	    return this.field;
 	};
 
 	/**
@@ -2796,119 +2907,114 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String} [type]  Specify the type of the value. Can be 'auto',
 	 *                         'array', 'object', or 'string'
 	 */
-	Node.prototype.setValue = function(value, type) {
-	  var childValue, child;
+	Node.prototype.setValue = function (value, type) {
+	    var childValue, child;
 
-	  // first clear all current childs (if any)
-	  var childs = this.childs;
-	  if (childs) {
-	    while (childs.length) {
-	      this.removeChild(childs[0]);
-	    }
-	  }
-
-	  // TODO: remove the DOM of this Node
-
-	  this.type = this._getType(value);
-
-	  // check if type corresponds with the provided type
-	  if (type && type != this.type) {
-	    if (type == 'string' && this.type == 'auto') {
-	      this.type = type;
-	    }
-	    else {
-	      throw new Error('Type mismatch: ' +
-	          'cannot cast value of type "' + this.type +
-	          ' to the specified type "' + type + '"');
-	    }
-	  }
-
-	  if (this.type == 'array') {
-	    // array
-	    this.childs = [];
-	    for (var i = 0, iMax = value.length; i < iMax; i++) {
-	      childValue = value[i];
-	      if (childValue !== undefined && !(childValue instanceof Function)) {
-	        // ignore undefined and functions
-	        child = new Node(this.editor, {
-	          value: childValue
-	        });
-	        this.appendChild(child);
-	      }
-	    }
-	    this.value = '';
-	  }
-	  else if (this.type == 'object') {
-	    // object
-	    this.childs = [];
-	    for (var childField in value) {
-	      if (value.hasOwnProperty(childField)) {
-	        childValue = value[childField];
-	        if (childValue !== undefined && !(childValue instanceof Function)) {
-	          // ignore undefined and functions
-	          child = new Node(this.editor, {
-	            field: childField,
-	            value: childValue
-	          });
-	          this.appendChild(child);
+	    // first clear all current childs (if any)
+	    var childs = this.childs;
+	    if (childs) {
+	        while (childs.length) {
+	            this.removeChild(childs[0]);
 	        }
-	      }
 	    }
-	    this.value = '';
-	  }
-	  else {
-	    // value
-	    this.childs = undefined;
-	    this.value = value;
-	    /* TODO
-	     if (typeof(value) == 'string') {
-	     var escValue = JSON.stringify(value);
-	     this.value = escValue.substring(1, escValue.length - 1);
-	     util.log('check', value, this.value);
-	     }
-	     else {
-	     this.value = value;
-	     }
-	     */
-	  }
+
+	    // TODO: remove the DOM of this Node
+
+	    this.type = this._getType(value);
+
+	    // check if type corresponds with the provided type
+	    if (type && type != this.type) {
+	        if (type == 'string' && this.type == 'auto') {
+	            this.type = type;
+	        } else {
+	            throw new Error('Type mismatch: ' +
+	                'cannot cast value of type "' + this.type +
+	                ' to the specified type "' + type + '"');
+	        }
+	    }
+
+	    if (this.type == 'array') {
+	        // array
+	        this.childs = [];
+	        for (var i = 0, iMax = value.length; i < iMax; i++) {
+	            childValue = value[i];
+	            if (childValue !== undefined && !(childValue instanceof Function)) {
+	                // ignore undefined and functions
+	                child = new Node(this.editor, {
+	                    value: childValue
+	                });
+	                this.appendChild(child);
+	            }
+	        }
+	        this.value = '';
+	    } else if (this.type == 'object') {
+	        // object
+	        this.childs = [];
+	        for (var childField in value) {
+	            if (value.hasOwnProperty(childField)) {
+	                childValue = value[childField];
+	                if (childValue !== undefined && !(childValue instanceof Function)) {
+	                    // ignore undefined and functions
+	                    child = new Node(this.editor, {
+	                        field: childField,
+	                        value: childValue
+	                    });
+	                    this.appendChild(child);
+	                }
+	            }
+	        }
+	        this.value = '';
+	    } else {
+	        // value
+	        this.childs = undefined;
+	        this.value = value;
+	        /* TODO
+	         if (typeof(value) == 'string') {
+	         var escValue = JSON.stringify(value);
+	         this.value = escValue.substring(1, escValue.length - 1);
+	         util.log('check', value, this.value);
+	         }
+	         else {
+	         this.value = value;
+	         }
+	         */
+	    }
 	};
 
 	/**
 	 * Get value. Value is a JSON structure
 	 * @return {*} value
 	 */
-	Node.prototype.getValue = function() {
-	  //var childs, i, iMax;
+	Node.prototype.getValue = function () {
+	    //var childs, i, iMax;
 
-	  if (this.type == 'array') {
-	    var arr = [];
-	    this.childs.forEach (function (child) {
-	      arr.push(child.getValue());
-	    });
-	    return arr;
-	  }
-	  else if (this.type == 'object') {
-	    var obj = {};
-	    this.childs.forEach (function (child) {
-	      obj[child.getField()] = child.getValue();
-	    });
-	    return obj;
-	  }
-	  else {
-	    if (this.value === undefined) {
-	      this._getDomValue();
+	    if (this.type == 'array') {
+	        var arr = [];
+	        this.childs.forEach(function (child) {
+	            arr.push(child.getValue());
+	        });
+	        return arr;
+	    } else if (this.type == 'object') {
+	        var obj = {};
+	        this.childs.forEach(function (child) {
+	            obj[child.getField()] = child.getValue();
+	        });
+	        return obj;
+	    } else {
+	        if (this.value === undefined) {
+	            this._getDomValue();
+	        }
+
+	        return this.value;
 	    }
-
-	    return this.value;
-	  }
 	};
 
 	/**
 	 * Get the nesting level of this node
 	 * @return {Number} level
 	 */
-	Node.prototype.getLevel = function() {
-	  return (this.parent ? this.parent.getLevel() + 1 : 0);
+	Node.prototype.getLevel = function () {
+	    return (this.parent ? this.parent.getLevel() + 1 : 0);
 	};
 
 	/**
@@ -2917,32 +3023,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * not. The DOM elements are not cloned.
 	 * @return {Node} clone
 	 */
-	Node.prototype.clone = function() {
-	  var clone = new Node(this.editor);
-	  clone.type = this.type;
-	  clone.field = this.field;
-	  clone.fieldInnerText = this.fieldInnerText;
-	  clone.fieldEditable = this.fieldEditable;
-	  clone.value = this.value;
-	  clone.valueInnerText = this.valueInnerText;
-	  clone.expanded = this.expanded;
+	Node.prototype.clone = function () {
+	    var clone = new Node(this.editor);
+	    clone.type = this.type;
+	    clone.field = this.field;
+	    clone.fieldInnerText = this.fieldInnerText;
+	    clone.fieldEditable = this.fieldEditable;
+	    clone.value = this.value;
+	    clone.valueInnerText = this.valueInnerText;
+	    clone.expanded = this.expanded;
 
-	  if (this.childs) {
-	    // an object or array
-	    var cloneChilds = [];
-	    this.childs.forEach(function (child) {
-	      var childClone = child.clone();
-	      childClone.setParent(clone);
-	      cloneChilds.push(childClone);
-	    });
-	    clone.childs = cloneChilds;
-	  }
-	  else {
-	    // a value
-	    clone.childs = undefined;
-	  }
+	    if (this.childs) {
+	        // an object or array
+	        var cloneChilds = [];
+	        this.childs.forEach(function (child) {
+	            var childClone = child.clone();
+	            childClone.setParent(clone);
+	            cloneChilds.push(childClone);
+	        });
+	        clone.childs = cloneChilds;
+	    } else {
+	        // a value
+	        clone.childs = undefined;
+	    }
 
-	  return clone;
+	    return clone;
 	};
 
 	/**
@@ -2950,24 +3055,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {boolean} [recurse] Optional recursion, true by default. When
 	 *                            true, all childs will be expanded recursively
 	 */
-	Node.prototype.expand = function(recurse) {
-	  if (!this.childs) {
-	    return;
-	  }
+	Node.prototype.expand = function (recurse) {
+	    if (!this.childs) {
+	        return;
+	    }
 
-	  // set this node expanded
-	  this.expanded = true;
-	  if (this.dom.expand) {
-	    this.dom.expand.className = 'expanded';
-	  }
+	    // set this node expanded
+	    this.expanded = true;
+	    if (this.dom.expand) {
+	        this.dom.expand.className = 'expanded';
+	    }
 
-	  this.showChilds();
+	    this.showChilds();
 
-	  if (recurse !== false) {
-	    this.childs.forEach(function (child) {
-	      child.expand(recurse);
-	    });
-	  }
+	    if (recurse !== false) {
+	        this.childs.forEach(function (child) {
+	            child.expand(recurse);
+	        });
+	    }
 	};
 
 	/**
@@ -2975,96 +3080,95 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {boolean} [recurse] Optional recursion, true by default. When
 	 *                            true, all childs will be collapsed recursively
 	 */
-	Node.prototype.collapse = function(recurse) {
-	  if (!this.childs) {
-	    return;
-	  }
+	Node.prototype.collapse = function (recurse) {
+	    if (!this.childs) {
+	        return;
+	    }
 
-	  this.hideChilds();
+	    this.hideChilds();
 
-	  // collapse childs in case of recurse
-	  if (recurse !== false) {
-	    this.childs.forEach(function (child) {
-	      child.collapse(recurse);
-	    });
+	    // collapse childs in case of recurse
+	    if (recurse !== false) {
+	        this.childs.forEach(function (child) {
+	            child.collapse(recurse);
+	        });
 
-	  }
+	    }
 
-	  // make this node collapsed
-	  if (this.dom.expand) {
-	    this.dom.expand.className = 'collapsed';
-	  }
-	  this.expanded = false;
+	    // make this node collapsed
+	    if (this.dom.expand) {
+	        this.dom.expand.className = 'collapsed';
+	    }
+	    this.expanded = false;
 	};
 
 	/**
 	 * Recursively show all childs when they are expanded
 	 */
-	Node.prototype.showChilds = function() {
-	  var childs = this.childs;
-	  if (!childs) {
-	    return;
-	  }
-	  if (!this.expanded) {
-	    return;
-	  }
-
-	  var tr = this.dom.tr;
-	  var table = tr ? tr.parentNode : undefined;
-	  if (table) {
-	    // show row with append button
-	    var append = this.getAppend();
-	    var nextTr = tr.nextSibling;
-	    if (nextTr) {
-	      table.insertBefore(append, nextTr);
+	Node.prototype.showChilds = function () {
+	    var childs = this.childs;
+	    if (!childs) {
+	        return;
 	    }
-	    else {
-	      table.appendChild(append);
+	    if (!this.expanded) {
+	        return;
 	    }
 
-	    // show childs
-	    this.childs.forEach(function (child) {
-	      table.insertBefore(child.getDom(), append);
-	      child.showChilds();
-	    });
-	  }
+	    var tr = this.dom.tr;
+	    var table = tr ? tr.parentNode : undefined;
+	    if (table) {
+	        // show row with append button
+	        var append = this.getAppend();
+	        var nextTr = tr.nextSibling;
+	        if (nextTr) {
+	            table.insertBefore(append, nextTr);
+	        } else {
+	            table.appendChild(append);
+	        }
+
+	        // show childs
+	        this.childs.forEach(function (child) {
+	            table.insertBefore(child.getDom(), append);
+	            child.showChilds();
+	        });
+	    }
 	};
 
 	/**
 	 * Hide the node with all its childs
 	 */
-	Node.prototype.hide = function() {
-	  var tr = this.dom.tr;
-	  var table = tr ? tr.parentNode : undefined;
-	  if (table) {
-	    table.removeChild(tr);
-	  }
-	  this.hideChilds();
+	Node.prototype.hide = function () {
+	    var tr = this.dom.tr;
+	    var table = tr ? tr.parentNode : undefined;
+	    if (table) {
+	        table.removeChild(tr);
+	    }
+	    this.hideChilds();
 	};
 
 
 	/**
 	 * Recursively hide all childs
 	 */
-	Node.prototype.hideChilds = function() {
-	  var childs = this.childs;
-	  if (!childs) {
-	    return;
-	  }
-	  if (!this.expanded) {
-	    return;
-	  }
+	Node.prototype.hideChilds = function () {
+	    var childs = this.childs;
+	    if (!childs) {
+	        return;
+	    }
+	    if (!this.expanded) {
+	        return;
+	    }
 
-	  // hide append row
-	  var append = this.getAppend();
-	  if (append.parentNode) {
-	    append.parentNode.removeChild(append);
-	  }
+	    // hide append row
+	    var append = this.getAppend();
+	    if (append.parentNode) {
+	        append.parentNode.removeChild(append);
+	    }
 
-	  // hide childs
-	  this.childs.forEach(function (child) {
-	    child.hide();
-	  });
+	    // hide childs
+	    this.childs.forEach(function (child) {
+	        child.hide();
+	    });
 	};
 
 
@@ -3073,31 +3177,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * Only applicable when Node value is of type array or object
 	 * @param {Node} node
 	 */
-	Node.prototype.appendChild = function(node) {
-	  if (this._hasChilds()) {
-	    // adjust the link to the parent
-	    node.setParent(this);
-	    node.fieldEditable = (this.type == 'object');
-	    if (this.type == 'array') {
-	      node.index = this.childs.length;
+	Node.prototype.appendChild = function (node) {
+	    if (this._hasChilds()) {
+	        // adjust the link to the parent
+	        node.setParent(this);
+	        node.fieldEditable = (this.type == 'object');
+	        if (this.type == 'array') {
+	            node.index = this.childs.length;
+	        }
+	        this.childs.push(node);
+
+	        if (this.expanded) {
+	            // insert into the DOM, before the appendRow
+	            var newTr = node.getDom();
+	            var appendTr = this.getAppend();
+	            var table = appendTr ? appendTr.parentNode : undefined;
+	            if (appendTr && table) {
+	                table.insertBefore(newTr, appendTr);
+	            }
+
+	            node.showChilds();
+	        }
+
+	        this.updateDom({
+	            'updateIndexes': true
+	        });
+	        node.updateDom({
+	            'recurse': true
+	        });
 	    }
-	    this.childs.push(node);
-
-	    if (this.expanded) {
-	      // insert into the DOM, before the appendRow
-	      var newTr = node.getDom();
-	      var appendTr = this.getAppend();
-	      var table = appendTr ? appendTr.parentNode : undefined;
-	      if (appendTr && table) {
-	        table.insertBefore(newTr, appendTr);
-	      }
-
-	      node.showChilds();
-	    }
-
-	    this.updateDom({'updateIndexes': true});
-	    node.updateDom({'recurse': true});
-	  }
 	};
 
 
@@ -3107,32 +3215,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Node} node
 	 * @param {Node} beforeNode
 	 */
-	Node.prototype.moveBefore = function(node, beforeNode) {
-	  if (this._hasChilds()) {
-	    // create a temporary row, to prevent the scroll position from jumping
-	    // when removing the node
-	    var tbody = (this.dom.tr) ? this.dom.tr.parentNode : undefined;
-	    if (tbody) {
-	      var trTemp = document.createElement('tr');
-	      trTemp.style.height = tbody.clientHeight + 'px';
-	      tbody.appendChild(trTemp);
-	    }
+	Node.prototype.moveBefore = function (node, beforeNode) {
+	    if (this._hasChilds()) {
+	        // create a temporary row, to prevent the scroll position from jumping
+	        // when removing the node
+	        var tbody = (this.dom.tr) ? this.dom.tr.parentNode : undefined;
+	        if (tbody) {
+	            var trTemp = document.createElement('tr');
+	            trTemp.style.height = tbody.clientHeight + 'px';
+	            tbody.appendChild(trTemp);
+	        }
 
-	    if (node.parent) {
-	      node.parent.removeChild(node);
-	    }
+	        if (node.parent) {
+	            node.parent.removeChild(node);
+	        }
 
-	    if (beforeNode instanceof AppendNode) {
-	      this.appendChild(node);
-	    }
-	    else {
-	      this.insertBefore(node, beforeNode);
-	    }
+	        if (beforeNode instanceof AppendNode) {
+	            this.appendChild(node);
+	        } else {
+	            this.insertBefore(node, beforeNode);
+	        }
 
-	    if (tbody) {
-	      tbody.removeChild(trTemp);
+	        if (tbody) {
+	            tbody.removeChild(trTemp);
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -3143,17 +3250,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Number} index
 	 */
 	Node.prototype.moveTo = function (node, index) {
-	  if (node.parent == this) {
-	    // same parent
-	    var currentIndex = this.childs.indexOf(node);
-	    if (currentIndex < index) {
-	      // compensate the index for removal of the node itself
-	      index++;
+	    if (node.parent == this) {
+	        // same parent
+	        var currentIndex = this.childs.indexOf(node);
+	        if (currentIndex < index) {
+	            // compensate the index for removal of the node itself
+	            index++;
+	        }
 	    }
-	  }
 
-	  var beforeNode = this.childs[index] || this.append;
-	  this.moveBefore(node, beforeNode);
+	    var beforeNode = this.childs[index] || this.append;
+	    this.moveBefore(node, beforeNode);
 	};
 
 	/**
@@ -3162,44 +3269,47 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Node} node
 	 * @param {Node} beforeNode
 	 */
-	Node.prototype.insertBefore = function(node, beforeNode) {
-	  if (this._hasChilds()) {
-	    if (beforeNode == this.append) {
-	      // append to the child nodes
+	Node.prototype.insertBefore = function (node, beforeNode) {
+	    if (this._hasChilds()) {
+	        if (beforeNode == this.append) {
+	            // append to the child nodes
 
-	      // adjust the link to the parent
-	      node.setParent(this);
-	      node.fieldEditable = (this.type == 'object');
-	      this.childs.push(node);
+	            // adjust the link to the parent
+	            node.setParent(this);
+	            node.fieldEditable = (this.type == 'object');
+	            this.childs.push(node);
+	        } else {
+	            // insert before a child node
+	            var index = this.childs.indexOf(beforeNode);
+	            if (index == -1) {
+	                throw new Error('Node not found');
+	            }
+
+	            // adjust the link to the parent
+	            node.setParent(this);
+	            node.fieldEditable = (this.type == 'object');
+	            this.childs.splice(index, 0, node);
+	        }
+
+	        if (this.expanded) {
+	            // insert into the DOM
+	            var newTr = node.getDom();
+	            var nextTr = beforeNode.getDom();
+	            var table = nextTr ? nextTr.parentNode : undefined;
+	            if (nextTr && table) {
+	                table.insertBefore(newTr, nextTr);
+	            }
+
+	            node.showChilds();
+	        }
+
+	        this.updateDom({
+	            'updateIndexes': true
+	        });
+	        node.updateDom({
+	            'recurse': true
+	        });
 	    }
-	    else {
-	      // insert before a child node
-	      var index = this.childs.indexOf(beforeNode);
-	      if (index == -1) {
-	        throw new Error('Node not found');
-	      }
-
-	      // adjust the link to the parent
-	      node.setParent(this);
-	      node.fieldEditable = (this.type == 'object');
-	      this.childs.splice(index, 0, node);
-	    }
-
-	    if (this.expanded) {
-	      // insert into the DOM
-	      var newTr = node.getDom();
-	      var nextTr = beforeNode.getDom();
-	      var table = nextTr ? nextTr.parentNode : undefined;
-	      if (nextTr && table) {
-	        table.insertBefore(newTr, nextTr);
-	      }
-
-	      node.showChilds();
-	    }
-
-	    this.updateDom({'updateIndexes': true});
-	    node.updateDom({'recurse': true});
-	  }
 	};
 
 	/**
@@ -3208,17 +3318,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Node} node
 	 * @param {Node} afterNode
 	 */
-	Node.prototype.insertAfter = function(node, afterNode) {
-	  if (this._hasChilds()) {
-	    var index = this.childs.indexOf(afterNode);
-	    var beforeNode = this.childs[index + 1];
-	    if (beforeNode) {
-	      this.insertBefore(node, beforeNode);
+	Node.prototype.insertAfter = function (node, afterNode) {
+	    if (this._hasChilds()) {
+	        var index = this.childs.indexOf(afterNode);
+	        var beforeNode = this.childs[index + 1];
+	        if (beforeNode) {
+	            this.insertBefore(node, beforeNode);
+	        } else {
+	            this.appendChild(node);
+	        }
 	    }
-	    else {
-	      this.appendChild(node);
-	    }
-	  }
 	};
 
 	/**
@@ -3228,74 +3337,72 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String} text
 	 * @return {Node[]} results  Array with nodes containing the search text
 	 */
-	Node.prototype.search = function(text) {
-	  var results = [];
-	  var index;
-	  var search = text ? text.toLowerCase() : undefined;
+	Node.prototype.search = function (text) {
+	    var results = [];
+	    var index;
+	    var search = text ? text.toLowerCase() : undefined;
 
-	  // delete old search data
-	  delete this.searchField;
-	  delete this.searchValue;
+	    // delete old search data
+	    delete this.searchField;
+	    delete this.searchValue;
 
-	  // search in field
-	  if (this.field != undefined) {
-	    var field = String(this.field).toLowerCase();
-	    index = field.indexOf(search);
-	    if (index != -1) {
-	      this.searchField = true;
-	      results.push({
-	        'node': this,
-	        'elem': 'field'
-	      });
+	    // search in field
+	    if (this.field != undefined) {
+	        var field = String(this.field).toLowerCase();
+	        index = field.indexOf(search);
+	        if (index != -1) {
+	            this.searchField = true;
+	            results.push({
+	                'node': this,
+	                'elem': 'field'
+	            });
+	        }
+
+	        // update dom
+	        this._updateDomField();
 	    }
 
-	    // update dom
-	    this._updateDomField();
-	  }
+	    // search in value
+	    if (this._hasChilds()) {
+	        // array, object
 
-	  // search in value
-	  if (this._hasChilds()) {
-	    // array, object
+	        // search the nodes childs
+	        if (this.childs) {
+	            var childResults = [];
+	            this.childs.forEach(function (child) {
+	                childResults = childResults.concat(child.search(text));
+	            });
+	            results = results.concat(childResults);
+	        }
 
-	    // search the nodes childs
-	    if (this.childs) {
-	      var childResults = [];
-	      this.childs.forEach(function (child) {
-	        childResults = childResults.concat(child.search(text));
-	      });
-	      results = results.concat(childResults);
+	        // update dom
+	        if (search != undefined) {
+	            var recurse = false;
+	            if (childResults.length == 0) {
+	                this.collapse(recurse);
+	            } else {
+	                this.expand(recurse);
+	            }
+	        }
+	    } else {
+	        // string, auto
+	        if (this.value != undefined) {
+	            var value = String(this.value).toLowerCase();
+	            index = value.indexOf(search);
+	            if (index != -1) {
+	                this.searchValue = true;
+	                results.push({
+	                    'node': this,
+	                    'elem': 'value'
+	                });
+	            }
+	        }
+
+	        // update dom
+	        this._updateDomValue();
 	    }
 
-	    // update dom
-	    if (search != undefined) {
-	      var recurse = false;
-	      if (childResults.length == 0) {
-	        this.collapse(recurse);
-	      }
-	      else {
-	        this.expand(recurse);
-	      }
-	    }
-	  }
-	  else {
-	    // string, auto
-	    if (this.value != undefined ) {
-	      var value = String(this.value).toLowerCase();
-	      index = value.indexOf(search);
-	      if (index != -1) {
-	        this.searchValue = true;
-	        results.push({
-	          'node': this,
-	          'elem': 'value'
-	        });
-	      }
-	    }
-
-	    // update dom
-	    this._updateDomValue();
-	  }
-
-	  return results;
+	    return results;
 	};
 
 	/**
@@ -3303,20 +3410,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * The node will not get the focus
 	 * @param {function(boolean)} [callback]
 	 */
-	Node.prototype.scrollTo = function(callback) {
-	  if (!this.dom.tr || !this.dom.tr.parentNode) {
-	    // if the node is not visible, expand its parents
-	    var parent = this.parent;
-	    var recurse = false;
-	    while (parent) {
-	      parent.expand(recurse);
-	      parent = parent.parent;
+	Node.prototype.scrollTo = function (callback) {
+	    if (!this.dom.tr || !this.dom.tr.parentNode) {
+	        // if the node is not visible, expand its parents
+	        var parent = this.parent;
+	        var recurse = false;
+	        while (parent) {
+	            parent.expand(recurse);
+	            parent = parent.parent;
+	        }
 	    }
-	  }
 
-	  if (this.dom.tr && this.dom.tr.parentNode) {
-	    this.editor.scrollTo(this.dom.tr.offsetTop, callback);
-	  }
+	    if (this.dom.tr && this.dom.tr.parentNode) {
+	        this.editor.scrollTo(this.dom.tr.offsetTop, callback);
+	    }
 	};
 
 
@@ -3329,98 +3436,88 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                                focus available values: 'drag', 'menu',
 	 *                                'expand', 'field', 'value' (default)
 	 */
-	Node.prototype.focus = function(elementName) {
-	  Node.focusElement = elementName;
+	Node.prototype.focus = function (elementName) {
+	    Node.focusElement = elementName;
 
-	  if (this.dom.tr && this.dom.tr.parentNode) {
-	    var dom = this.dom;
+	    if (this.dom.tr && this.dom.tr.parentNode) {
+	        var dom = this.dom;
 
-	    switch (elementName) {
-	      case 'drag':
-	        if (dom.drag) {
-	          dom.drag.focus();
-	        }
-	        else {
-	          dom.menu.focus();
-	        }
-	        break;
+	        switch (elementName) {
+	        case 'drag':
+	            if (dom.drag) {
+	                dom.drag.focus();
+	            } else {
+	                dom.menu.focus();
+	            }
+	            break;
 
-	      case 'menu':
-	        dom.menu.focus();
-	        break;
+	        case 'menu':
+	            dom.menu.focus();
+	            break;
 
-	      case 'expand':
-	        if (this._hasChilds()) {
-	          dom.expand.focus();
-	        }
-	        else if (dom.field && this.fieldEditable) {
-	          dom.field.focus();
-	          util.selectContentEditable(dom.field);
-	        }
-	        else if (dom.value && !this._hasChilds()) {
-	          dom.value.focus();
-	          util.selectContentEditable(dom.value);
-	        }
-	        else {
-	          dom.menu.focus();
-	        }
-	        break;
+	        case 'expand':
+	            if (this._hasChilds()) {
+	                dom.expand.focus();
+	            } else if (dom.field && this.fieldEditable) {
+	                dom.field.focus();
+	                util.selectContentEditable(dom.field);
+	            } else if (dom.value && !this._hasChilds()) {
+	                dom.value.focus();
+	                util.selectContentEditable(dom.value);
+	            } else {
+	                dom.menu.focus();
+	            }
+	            break;
 
-	      case 'field':
-	        if (dom.field && this.fieldEditable) {
-	          dom.field.focus();
-	          util.selectContentEditable(dom.field);
-	        }
-	        else if (dom.value && !this._hasChilds()) {
-	          dom.value.focus();
-	          util.selectContentEditable(dom.value);
-	        }
-	        else if (this._hasChilds()) {
-	          dom.expand.focus();
-	        }
-	        else {
-	          dom.menu.focus();
-	        }
-	        break;
+	        case 'field':
+	            if (dom.field && this.fieldEditable) {
+	                dom.field.focus();
+	                util.selectContentEditable(dom.field);
+	            } else if (dom.value && !this._hasChilds()) {
+	                dom.value.focus();
+	                util.selectContentEditable(dom.value);
+	            } else if (this._hasChilds()) {
+	                dom.expand.focus();
+	            } else {
+	                dom.menu.focus();
+	            }
+	            break;
 
-	      case 'value':
-	      default:
-	        if (dom.value && !this._hasChilds()) {
-	          dom.value.focus();
-	          util.selectContentEditable(dom.value);
+	        case 'value':
+	        default:
+	            if (dom.value && !this._hasChilds()) {
+	                dom.value.focus();
+	                util.selectContentEditable(dom.value);
+	            } else if (dom.field && this.fieldEditable) {
+	                dom.field.focus();
+	                util.selectContentEditable(dom.field);
+	            } else if (this._hasChilds()) {
+	                dom.expand.focus();
+	            } else {
+	                dom.menu.focus();
+	            }
+	            break;
 	        }
-	        else if (dom.field && this.fieldEditable) {
-	          dom.field.focus();
-	          util.selectContentEditable(dom.field);
-	        }
-	        else if (this._hasChilds()) {
-	          dom.expand.focus();
-	        }
-	        else {
-	          dom.menu.focus();
-	        }
-	        break;
 	    }
-	  }
 	};
 
 	/**
 	 * Select all text in an editable div after a delay of 0 ms
 	 * @param {Element} editableDiv
 	 */
-	Node.select = function(editableDiv) {
-	  setTimeout(function () {
-	    util.selectContentEditable(editableDiv);
-	  }, 0);
+	Node.select = function (editableDiv) {
+	    setTimeout(function () {
+	        util.selectContentEditable(editableDiv);
+	    }, 0);
 	};
 
 	/**
 	 * Update the values from the DOM field and value of this node
 	 */
-	Node.prototype.blur = function() {
-	  // retrieve the actual field and value from the DOM.
-	  this._getDomValue(false);
-	  this._getDomField(false);
+	Node.prototype.blur = function () {
+	    // retrieve the actual field and value from the DOM.
+	    this._getDomValue(false);
+	    this._getDomField(false);
 	};
 
 	/**
@@ -3430,17 +3527,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Node} clone         the clone of the node
 	 * @private
 	 */
-	Node.prototype._duplicate = function(node) {
-	  var clone = node.clone();
+	Node.prototype._duplicate = function (node) {
+	    var clone = node.clone();
 
-	  /* TODO: adjust the field name (to prevent equal field names)
-	   if (this.type == 'object') {
-	   }
-	   */
+	    /* TODO: adjust the field name (to prevent equal field names)
+	     if (this.type == 'object') {
+	     }
+	     */
 
-	  this.insertAfter(clone, node);
+	    this.insertAfter(clone, node);
 
-	  return clone;
+	    return clone;
 	};
 
 	/**
@@ -3449,22 +3546,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Node} node
 	 * @return {boolean} containsNode
 	 */
-	Node.prototype.containsNode = function(node) {
-	  if (this == node) {
-	    return true;
-	  }
-
-	  var childs = this.childs;
-	  if (childs) {
-	    // TODO: use the js5 Array.some() here?
-	    for (var i = 0, iMax = childs.length; i < iMax; i++) {
-	      if (childs[i].containsNode(node)) {
+	Node.prototype.containsNode = function (node) {
+	    if (this == node) {
 	        return true;
-	      }
 	    }
-	  }
 
-	  return false;
+	    var childs = this.childs;
+	    if (childs) {
+	        // TODO: use the js5 Array.some() here?
+	        for (var i = 0, iMax = childs.length; i < iMax; i++) {
+	            if (childs[i].containsNode(node)) {
+	                return true;
+	            }
+	        }
+	    }
+
+	    return false;
 	};
 
 	/**
@@ -3475,38 +3572,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                                         the node is appended at the end
 	 * @private
 	 */
-	Node.prototype._move = function(node, beforeNode) {
-	  if (node == beforeNode) {
-	    // nothing to do...
-	    return;
-	  }
+	Node.prototype._move = function (node, beforeNode) {
+	    if (node == beforeNode) {
+	        // nothing to do...
+	        return;
+	    }
 
-	  // check if this node is not a child of the node to be moved here
-	  if (node.containsNode(this)) {
-	    throw new Error('Cannot move a field into a child of itself');
-	  }
+	    // check if this node is not a child of the node to be moved here
+	    if (node.containsNode(this)) {
+	        throw new Error('Cannot move a field into a child of itself');
+	    }
 
-	  // remove the original node
-	  if (node.parent) {
-	    node.parent.removeChild(node);
-	  }
+	    // remove the original node
+	    if (node.parent) {
+	        node.parent.removeChild(node);
+	    }
 
-	  // create a clone of the node
-	  var clone = node.clone();
-	  node.clearDom();
+	    // create a clone of the node
+	    var clone = node.clone();
+	    node.clearDom();
 
-	  // insert or append the node
-	  if (beforeNode) {
-	    this.insertBefore(clone, beforeNode);
-	  }
-	  else {
-	    this.appendChild(clone);
-	  }
+	    // insert or append the node
+	    if (beforeNode) {
+	        this.insertBefore(clone, beforeNode);
+	    } else {
+	        this.appendChild(clone);
+	    }
 
-	  /* TODO: adjust the field name (to prevent equal field names)
-	   if (this.type == 'object') {
-	   }
-	   */
+	    /* TODO: adjust the field name (to prevent equal field names)
+	     if (this.type == 'object') {
+	     }
+	     */
 	};
 
 	/**
@@ -3516,26 +3612,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Node | undefined} node  The removed node on success,
 	 *                                             else undefined
 	 */
-	Node.prototype.removeChild = function(node) {
-	  if (this.childs) {
-	    var index = this.childs.indexOf(node);
+	Node.prototype.removeChild = function (node) {
+	    if (this.childs) {
+	        var index = this.childs.indexOf(node);
 
-	    if (index != -1) {
-	      node.hide();
+	        if (index != -1) {
+	            node.hide();
 
-	      // delete old search results
-	      delete node.searchField;
-	      delete node.searchValue;
+	            // delete old search results
+	            delete node.searchField;
+	            delete node.searchValue;
 
-	      var removedNode = this.childs.splice(index, 1)[0];
+	            var removedNode = this.childs.splice(index, 1)[0];
 
-	      this.updateDom({'updateIndexes': true});
+	            this.updateDom({
+	                'updateIndexes': true
+	            });
 
-	      return removedNode;
+	            return removedNode;
+	        }
 	    }
-	  }
 
-	  return undefined;
+	    return undefined;
 	};
 
 	/**
@@ -3546,7 +3644,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._remove = function (node) {
-	  this.removeChild(node);
+	    this.removeChild(node);
 	};
 
 	/**
@@ -3554,100 +3652,96 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String} newType
 	 */
 	Node.prototype.changeType = function (newType) {
-	  var oldType = this.type;
+	    var oldType = this.type;
 
-	  if (oldType == newType) {
-	    // type is not changed
-	    return;
-	  }
-
-	  if ((newType == 'string' || newType == 'auto') &&
-	      (oldType == 'string' || oldType == 'auto')) {
-	    // this is an easy change
-	    this.type = newType;
-	  }
-	  else {
-	    // change from array to object, or from string/auto to object/array
-	    var table = this.dom.tr ? this.dom.tr.parentNode : undefined;
-	    var lastTr;
-	    if (this.expanded) {
-	      lastTr = this.getAppend();
+	    if (oldType == newType) {
+	        // type is not changed
+	        return;
 	    }
-	    else {
-	      lastTr = this.getDom();
-	    }
-	    var nextTr = (lastTr && lastTr.parentNode) ? lastTr.nextSibling : undefined;
 
-	    // hide current field and all its childs
-	    this.hide();
-	    this.clearDom();
-
-	    // adjust the field and the value
-	    this.type = newType;
-
-	    // adjust childs
-	    if (newType == 'object') {
-	      if (!this.childs) {
-	        this.childs = [];
-	      }
-
-	      this.childs.forEach(function (child, index) {
-	        child.clearDom();
-	        delete child.index;
-	        child.fieldEditable = true;
-	        if (child.field == undefined) {
-	          child.field = '';
+	    if ((newType == 'string' || newType == 'auto') &&
+	        (oldType == 'string' || oldType == 'auto')) {
+	        // this is an easy change
+	        this.type = newType;
+	    } else {
+	        // change from array to object, or from string/auto to object/array
+	        var table = this.dom.tr ? this.dom.tr.parentNode : undefined;
+	        var lastTr;
+	        if (this.expanded) {
+	            lastTr = this.getAppend();
+	        } else {
+	            lastTr = this.getDom();
 	        }
-	      });
+	        var nextTr = (lastTr && lastTr.parentNode) ? lastTr.nextSibling : undefined;
 
-	      if (oldType == 'string' || oldType == 'auto') {
-	        this.expanded = true;
-	      }
+	        // hide current field and all its childs
+	        this.hide();
+	        this.clearDom();
+
+	        // adjust the field and the value
+	        this.type = newType;
+
+	        // adjust childs
+	        if (newType == 'object') {
+	            if (!this.childs) {
+	                this.childs = [];
+	            }
+
+	            this.childs.forEach(function (child, index) {
+	                child.clearDom();
+	                delete child.index;
+	                child.fieldEditable = true;
+	                if (child.field == undefined) {
+	                    child.field = '';
+	                }
+	            });
+
+	            if (oldType == 'string' || oldType == 'auto') {
+	                this.expanded = true;
+	            }
+	        } else if (newType == 'array') {
+	            if (!this.childs) {
+	                this.childs = [];
+	            }
+
+	            this.childs.forEach(function (child, index) {
+	                child.clearDom();
+	                child.fieldEditable = false;
+	                child.index = index;
+	            });
+
+	            if (oldType == 'string' || oldType == 'auto') {
+	                this.expanded = true;
+	            }
+	        } else {
+	            this.expanded = false;
+	        }
+
+	        // create new DOM
+	        if (table) {
+	            if (nextTr) {
+	                table.insertBefore(this.getDom(), nextTr);
+	            } else {
+	                table.appendChild(this.getDom());
+	            }
+	        }
+	        this.showChilds();
 	    }
-	    else if (newType == 'array') {
-	      if (!this.childs) {
-	        this.childs = [];
-	      }
 
-	      this.childs.forEach(function (child, index) {
-	        child.clearDom();
-	        child.fieldEditable = false;
-	        child.index = index;
-	      });
+	    if (newType == 'auto' || newType == 'string') {
+	        // cast value to the correct type
+	        if (newType == 'string') {
+	            this.value = String(this.value);
+	        } else {
+	            this.value = this._stringCast(String(this.value));
+	        }
 
-	      if (oldType == 'string' || oldType == 'auto') {
-	        this.expanded = true;
-	      }
-	    }
-	    else {
-	      this.expanded = false;
+	        this.focus();
 	    }
 
-	    // create new DOM
-	    if (table) {
-	      if (nextTr) {
-	        table.insertBefore(this.getDom(), nextTr);
-	      }
-	      else {
-	        table.appendChild(this.getDom());
-	      }
-	    }
-	    this.showChilds();
-	  }
-
-	  if (newType == 'auto' || newType == 'string') {
-	    // cast value to the correct type
-	    if (newType == 'string') {
-	      this.value = String(this.value);
-	    }
-	    else {
-	      this.value = this._stringCast(String(this.value));
-	    }
-
-	    this.focus();
-	  }
-
-	  this.updateDom({'updateIndexes': true});
+	    this.updateDom({
+	        'updateIndexes': true
+	    });
 	};
 
 	/**
@@ -3656,42 +3750,40 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                            case of invalid data
 	 * @private
 	 */
-	Node.prototype._getDomValue = function(silent) {
-	  if (this.dom.value && this.type != 'array' && this.type != 'object') {
-	    this.valueInnerText = util.getInnerText(this.dom.value);
-	  }
+	Node.prototype._getDomValue = function (silent) {
+	    if (this.dom.value && this.type != 'array' && this.type != 'object') {
+	        this.valueInnerText = util.getInnerText(this.dom.value);
+	    }
 
-	  if (this.valueInnerText != undefined) {
-	    try {
-	      // retrieve the value
-	      var value;
-	      if (this.type == 'string') {
-	        value = this._unescapeHTML(this.valueInnerText);
-	      }
-	      else {
-	        var str = this._unescapeHTML(this.valueInnerText);
-	        value = this._stringCast(str);
-	      }
-	      if (value !== this.value) {
-	        var oldValue = this.value;
-	        this.value = value;
-	        this.editor._onAction('editValue', {
-	          'node': this,
-	          'oldValue': oldValue,
-	          'newValue': value,
-	          'oldSelection': this.editor.selection,
-	          'newSelection': this.editor.getSelection()
-	        });
-	      }
+	    if (this.valueInnerText != undefined) {
+	        try {
+	            // retrieve the value
+	            var value;
+	            if (this.type == 'string') {
+	                value = this._unescapeHTML(this.valueInnerText);
+	            } else {
+	                var str = this._unescapeHTML(this.valueInnerText);
+	                value = this._stringCast(str);
+	            }
+	            if (value !== this.value) {
+	                var oldValue = this.value;
+	                this.value = value;
+	                this.editor._onAction('editValue', {
+	                    'node': this,
+	                    'oldValue': oldValue,
+	                    'newValue': value,
+	                    'oldSelection': this.editor.selection,
+	                    'newSelection': this.editor.getSelection()
+	                });
+	            }
+	        } catch (err) {
+	            this.value = undefined;
+	            // TODO: sent an action with the new, invalid value?
+	            if (silent !== true) {
+	                throw err;
+	            }
+	        }
 	    }
-	    catch (err) {
-	      this.value = undefined;
-	      // TODO: sent an action with the new, invalid value?
-	      if (silent !== true) {
-	        throw err;
-	      }
-	    }
-	  }
 	};
 
 	/**
@@ -3702,86 +3794,74 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._updateDomValue = function () {
-	  var domValue = this.dom.value;
-	  if (domValue) {
-	    // set text color depending on value type
-	    // TODO: put colors in css
-	    var v = this.value;
-	    var t = (this.type == 'auto') ? util.type(v) : this.type;
-	    var isUrl = (t == 'string' && util.isUrl(v));
-	    var color = '';
-	    if (isUrl && !this.editable.value) { // TODO: when to apply this?
-	      color = '';
-	    }
-	    else if (t == 'string') {
-	      color = 'green';
-	    }
-	    else if (t == 'number') {
-	      color = 'red';
-	    }
-	    else if (t == 'boolean') {
-	      color = 'darkorange';
-	    }
-	    else if (this._hasChilds()) {
-	      color = '';
-	    }
-	    else if (v === null) {
-	      color = '#004ED0';  // blue
-	    }
-	    else {
-	      // invalid value
-	      color = 'black';
-	    }
-	    domValue.style.color = color;
+	    var domValue = this.dom.value;
+	    if (domValue) {
+	        // set text color depending on value type
+	        // TODO: put colors in css
+	        var v = this.value;
+	        var t = (this.type == 'auto') ? util.type(v) : this.type;
+	        var isUrl = (t == 'string' && util.isUrl(v));
+	        var color = '';
+	        if (isUrl && !this.editable.value) { // TODO: when to apply this?
+	            color = '';
+	        } else if (t == 'string') {
+	            color = 'green';
+	        } else if (t == 'number') {
+	            color = 'red';
+	        } else if (t == 'boolean') {
+	            color = 'darkorange';
+	        } else if (this._hasChilds()) {
+	            color = '';
+	        } else if (v === null) {
+	            color = '#004ED0'; // blue
+	        } else {
+	            // invalid value
+	            color = 'black';
+	        }
+	        domValue.style.color = color;
 
-	    // make background color light-gray when empty
-	    var isEmpty = (String(this.value) == '' && this.type != 'array' && this.type != 'object');
-	    if (isEmpty) {
-	      util.addClassName(domValue, 'empty');
-	    }
-	    else {
-	      util.removeClassName(domValue, 'empty');
-	    }
+	        // make background color light-gray when empty
+	        var isEmpty = (String(this.value) == '' && this.type != 'array' && this.type != 'object');
+	        if (isEmpty) {
+	            util.addClassName(domValue, 'empty');
+	        } else {
+	            util.removeClassName(domValue, 'empty');
+	        }
 
-	    // underline url
-	    if (isUrl) {
-	      util.addClassName(domValue, 'url');
-	    }
-	    else {
-	      util.removeClassName(domValue, 'url');
-	    }
+	        // underline url
+	        if (isUrl) {
+	            util.addClassName(domValue, 'url');
+	        } else {
+	            util.removeClassName(domValue, 'url');
+	        }
 
-	    // update title
-	    if (t == 'array' || t == 'object') {
-	      var count = this.childs ? this.childs.length : 0;
-	      domValue.title = this.type + ' containing ' + count + ' items';
-	    }
-	    else if (t == 'string' && util.isUrl(v)) {
-	      if (this.editable.value) {
-	        domValue.title = 'Ctrl+Click or Ctrl+Enter to open url in new window';
-	      }
-	    }
-	    else {
-	      domValue.title = '';
-	    }
+	        // update title
+	        if (t == 'array' || t == 'object') {
+	            var count = this.childs ? this.childs.length : 0;
+	            domValue.title = this.type + ' containing ' + count + ' items';
+	        } else if (t == 'string' && util.isUrl(v)) {
+	            if (this.editable.value) {
+	                domValue.title = 'Ctrl+Click or Ctrl+Enter to open url in new window';
+	            }
+	        } else {
+	            domValue.title = '';
+	        }
 
-	    // highlight when there is a search result
-	    if (this.searchValueActive) {
-	      util.addClassName(domValue, 'highlight-active');
-	    }
-	    else {
-	      util.removeClassName(domValue, 'highlight-active');
-	    }
-	    if (this.searchValue) {
-	      util.addClassName(domValue, 'highlight');
-	    }
-	    else {
-	      util.removeClassName(domValue, 'highlight');
-	    }
+	        // highlight when there is a search result
+	        if (this.searchValueActive) {
+	            util.addClassName(domValue, 'highlight-active');
+	        } else {
+	            util.removeClassName(domValue, 'highlight-active');
+	        }
+	        if (this.searchValue) {
+	            util.addClassName(domValue, 'highlight');
+	        } else {
+	            util.removeClassName(domValue, 'highlight');
+	        }
 
-	    // strip formatting from the contents of the editable div
-	    util.stripFormatting(domValue);
-	  }
+	        // strip formatting from the contents of the editable div
+	        util.stripFormatting(domValue);
+	    }
 	};
 
 	/**
@@ -3792,34 +3872,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._updateDomField = function () {
-	  var domField = this.dom.field;
-	  if (domField) {
-	    // make backgound color lightgray when empty
-	    var isEmpty = (String(this.field) == '' && this.parent.type != 'array');
-	    if (isEmpty) {
-	      util.addClassName(domField, 'empty');
-	    }
-	    else {
-	      util.removeClassName(domField, 'empty');
-	    }
+	    var domField = this.dom.field;
+	    if (domField) {
+	        // make backgound color lightgray when empty
+	        var isEmpty = (String(this.field) == '' && this.parent.type != 'array');
+	        if (isEmpty) {
+	            util.addClassName(domField, 'empty');
+	        } else {
+	            util.removeClassName(domField, 'empty');
+	        }
 
-	    // highlight when there is a search result
-	    if (this.searchFieldActive) {
-	      util.addClassName(domField, 'highlight-active');
-	    }
-	    else {
-	      util.removeClassName(domField, 'highlight-active');
-	    }
-	    if (this.searchField) {
-	      util.addClassName(domField, 'highlight');
-	    }
-	    else {
-	      util.removeClassName(domField, 'highlight');
-	    }
+	        // highlight when there is a search result
+	        if (this.searchFieldActive) {
+	            util.addClassName(domField, 'highlight-active');
+	        } else {
+	            util.removeClassName(domField, 'highlight-active');
+	        }
+	        if (this.searchField) {
+	            util.addClassName(domField, 'highlight');
+	        } else {
+	            util.removeClassName(domField, 'highlight');
+	        }
 
-	    // strip formatting from the contents of the editable div
-	    util.stripFormatting(domField);
-	  }
+	        // strip formatting from the contents of the editable div
+	        util.stripFormatting(domField);
+	    }
 	};
 
 	/**
@@ -3828,46 +3905,45 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                            case of invalid data
 	 * @private
 	 */
-	Node.prototype._getDomField = function(silent) {
-	  if (this.dom.field && this.fieldEditable) {
-	    this.fieldInnerText = util.getInnerText(this.dom.field);
-	  }
-
-	  if (this.fieldInnerText != undefined) {
-	    try {
-	      var field = this._unescapeHTML(this.fieldInnerText);
-
-	      if (field !== this.field) {
-	        var oldField = this.field;
-	        this.field = field;
-	        this.editor._onAction('editField', {
-	          'node': this,
-	          'oldValue': oldField,
-	          'newValue': field,
-	          'oldSelection': this.editor.selection,
-	          'newSelection': this.editor.getSelection()
-	        });
-	      }
+	Node.prototype._getDomField = function (silent) {
+	    if (this.dom.field && this.fieldEditable) {
+	        this.fieldInnerText = util.getInnerText(this.dom.field);
 	    }
-	    catch (err) {
-	      this.field = undefined;
-	      // TODO: sent an action here, with the new, invalid value?
-	      if (silent !== true) {
-	        throw err;
-	      }
+
+	    if (this.fieldInnerText != undefined) {
+	        try {
+	            var field = this._unescapeHTML(this.fieldInnerText);
+
+	            if (field !== this.field) {
+	                var oldField = this.field;
+	                this.field = field;
+	                this.editor._onAction('editField', {
+	                    'node': this,
+	                    'oldValue': oldField,
+	                    'newValue': field,
+	                    'oldSelection': this.editor.selection,
+	                    'newSelection': this.editor.getSelection()
+	                });
+	            }
+	        } catch (err) {
+	            this.field = undefined;
+	            // TODO: sent an action here, with the new, invalid value?
+	            if (silent !== true) {
+	                throw err;
+	            }
+	        }
 	    }
-	  }
 	};
 
 	/**
 	 * Clear the dom of the node
 	 */
-	Node.prototype.clearDom = function() {
-	  // TODO: hide the node first?
-	  //this.hide();
-	  // TODO: recursively clear dom?
+	Node.prototype.clearDom = function () {
+	    // TODO: hide the node first?
+	    //this.hide();
+	    // TODO: recursively clear dom?
 
-	  this.dom = {};
+	    this.dom = {};
 	};
 
 	/**
@@ -3875,51 +3951,58 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * The dom will be generated when not yet created
 	 * @return {Element} tr    HTML DOM TR Element
 	 */
-	Node.prototype.getDom = function() {
-	  var dom = this.dom;
-	  if (dom.tr) {
-	    return dom.tr;
-	  }
-
-	  this._updateEditability();
-
-	  // create row
-	  dom.tr = document.createElement('tr');
-	  dom.tr.node = this;
-
-	  if (this.editor.options.mode === 'tree') { // note: we take here the global setting
-	    var tdDrag = document.createElement('td');
-	    if (this.editable.field) {
-	      // create draggable area
-	      if (this.parent) {
-	        var domDrag = document.createElement('button');
-	        dom.drag = domDrag;
-	        domDrag.className = 'dragarea';
-	        domDrag.title = 'Drag to move this field (Alt+Shift+Arrows)';
-	        tdDrag.appendChild(domDrag);
-	      }
+	Node.prototype.getDom = function () {
+	    var node = this;
+	    var dom = this.dom;
+	    if (dom.tr) {
+	        return dom.tr;
 	    }
-	    dom.tr.appendChild(tdDrag);
 
-	    // create context menu
-	    var tdMenu = document.createElement('td');
-	    var menu = document.createElement('button');
-	    dom.menu = menu;
-	    menu.className = 'contextmenu';
-	    menu.title = 'Click to open the actions menu (Ctrl+M)';
-	    tdMenu.appendChild(dom.menu);
-	    dom.tr.appendChild(tdMenu);
-	  }
+	    this._updateEditability();
 
-	  // create tree and field
-	  var tdField = document.createElement('td');
-	  dom.tr.appendChild(tdField);
-	  dom.tree = this._createDomTree();
-	  tdField.appendChild(dom.tree);
+	    // create row
+	    dom.tr = document.createElement('tr');
+	    dom.tr.node = this;
 
-	  this.updateDom({'updateIndexes': true});
+	    if (this.editor.options.mode === 'tree') { // note: we take here the global setting
+	        var tdDrag = document.createElement('td');
+	        if (this.editable.field) {
+	            // create draggable area
+	            if (this.parent) {
+	                var domDrag = document.createElement('button');
+	                dom.drag = domDrag;
+	                domDrag.className = 'dragarea';
+	                domDrag.title = 'Drag to move this field (Alt+Shift+Arrows)';
+	                tdDrag.appendChild(domDrag);
+	            }
+	        }
+	        dom.tr.appendChild(tdDrag);
 
-	  return dom.tr;
+	        // create context menu
+	        var tdMenu = document.createElement('td');
+	        var checkbox = document.createElement('input');
+	        dom.checkbox = checkbox;
+	        checkbox.className = 'contextmenu';
+	        checkbox.title = 'Click to select the menu (Ctrl+M)';
+	        checkbox.type = 'checkbox';
+	        checkbox.addEventListener('click', function () {
+	            node._onCheck();
+	        });
+	        tdMenu.appendChild(dom.checkbox);
+	        dom.tr.appendChild(tdMenu);
+	    }
+
+	    // create tree and field
+	    var tdField = document.createElement('td');
+	    dom.tr.appendChild(tdField);
+	    dom.tree = this._createDomTree();
+	    tdField.appendChild(dom.tree);
+
+	    this.updateDom({
+	        'updateIndexes': true
+	    });
+
+	    return dom.tr;
 	};
 
 	/**
@@ -3928,32 +4011,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onDragStart = function (event) {
-	  var node = this;
-	  if (!this.mousemove) {
-	    this.mousemove = util.addEventListener(document, 'mousemove',
-	        function (event) {
-	          node._onDrag(event);
-	        });
-	  }
+	    var node = this;
+	    if (!this.mousemove) {
+	        this.mousemove = util.addEventListener(document, 'mousemove',
+	            function (event) {
+	                node._onDrag(event);
+	            });
+	    }
 
-	  if (!this.mouseup) {
-	    this.mouseup = util.addEventListener(document, 'mouseup',
-	        function (event ) {
-	          node._onDragEnd(event);
-	        });
-	  }
+	    if (!this.mouseup) {
+	        this.mouseup = util.addEventListener(document, 'mouseup',
+	            function (event) {
+	                node._onDragEnd(event);
+	            });
+	    }
 
-	  this.editor.highlighter.lock();
-	  this.drag = {
-	    'oldCursor': document.body.style.cursor,
-	    'startParent': this.parent,
-	    'startIndex': this.parent.childs.indexOf(this),
-	    'mouseX': event.pageX,
-	    'level': this.getLevel()
-	  };
-	  document.body.style.cursor = 'move';
+	    this.editor.highlighter.lock();
+	    this.drag = {
+	        'oldCursor': document.body.style.cursor,
+	        'startParent': this.parent,
+	        'startIndex': this.parent.childs.indexOf(this),
+	        'mouseX': event.pageX,
+	        'level': this.getLevel()
+	    };
+	    document.body.style.cursor = 'move';
 
-	  event.preventDefault();
+	    event.preventDefault();
 	};
 
 	/**
@@ -3962,140 +4045,136 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onDrag = function (event) {
-	  // TODO: this method has grown too large. Split it in a number of methods
-	  var mouseY = event.pageY;
-	  var mouseX = event.pageX;
+	    // TODO: this method has grown too large. Split it in a number of methods
+	    var mouseY = event.pageY;
+	    var mouseX = event.pageX;
 
-	  var trThis, trPrev, trNext, trFirst, trLast, trRoot;
-	  var nodePrev, nodeNext;
-	  var topThis, topPrev, topFirst, heightThis, bottomNext, heightNext;
-	  var moved = false;
+	    var trThis, trPrev, trNext, trFirst, trLast, trRoot;
+	    var nodePrev, nodeNext;
+	    var topThis, topPrev, topFirst, heightThis, bottomNext, heightNext;
+	    var moved = false;
 
-	  // TODO: add an ESC option, which resets to the original position
+	    // TODO: add an ESC option, which resets to the original position
 
-	  // move up/down
-	  trThis = this.dom.tr;
-	  topThis = util.getAbsoluteTop(trThis);
-	  heightThis = trThis.offsetHeight;
-	  if (mouseY < topThis) {
-	    // move up
-	    trPrev = trThis;
-	    do {
-	      trPrev = trPrev.previousSibling;
-	      nodePrev = Node.getNodeFromTarget(trPrev);
-	      topPrev = trPrev ? util.getAbsoluteTop(trPrev) : 0;
-	    }
-	    while (trPrev && mouseY < topPrev);
+	    // move up/down
+	    trThis = this.dom.tr;
+	    topThis = util.getAbsoluteTop(trThis);
+	    heightThis = trThis.offsetHeight;
+	    if (mouseY < topThis) {
+	        // move up
+	        trPrev = trThis;
+	        do {
+	            trPrev = trPrev.previousSibling;
+	            nodePrev = Node.getNodeFromTarget(trPrev);
+	            topPrev = trPrev ? util.getAbsoluteTop(trPrev) : 0;
+	        }
+	        while (trPrev && mouseY < topPrev);
 
-	    if (nodePrev && !nodePrev.parent) {
-	      nodePrev = undefined;
-	    }
-
-	    if (!nodePrev) {
-	      // move to the first node
-	      trRoot = trThis.parentNode.firstChild;
-	      trPrev = trRoot ? trRoot.nextSibling : undefined;
-	      nodePrev = Node.getNodeFromTarget(trPrev);
-	      if (nodePrev == this) {
-	        nodePrev = undefined;
-	      }
-	    }
-
-	    if (nodePrev) {
-	      // check if mouseY is really inside the found node
-	      trPrev = nodePrev.dom.tr;
-	      topPrev = trPrev ? util.getAbsoluteTop(trPrev) : 0;
-	      if (mouseY > topPrev + heightThis) {
-	        nodePrev = undefined;
-	      }
-	    }
-
-	    if (nodePrev) {
-	      nodePrev.parent.moveBefore(this, nodePrev);
-	      moved = true;
-	    }
-	  }
-	  else {
-	    // move down
-	    trLast = (this.expanded && this.append) ? this.append.getDom() : this.dom.tr;
-	    trFirst = trLast ? trLast.nextSibling : undefined;
-	    if (trFirst) {
-	      topFirst = util.getAbsoluteTop(trFirst);
-	      trNext = trFirst;
-	      do {
-	        nodeNext = Node.getNodeFromTarget(trNext);
-	        if (trNext) {
-	          bottomNext = trNext.nextSibling ?
-	              util.getAbsoluteTop(trNext.nextSibling) : 0;
-	          heightNext = trNext ? (bottomNext - topFirst) : 0;
-
-	          if (nodeNext.parent.childs.length == 1 && nodeNext.parent.childs[0] == this) {
-	            // We are about to remove the last child of this parent,
-	            // which will make the parents appendNode visible.
-	            topThis += 24 - 1;
-	            // TODO: dangerous to suppose the height of the appendNode a constant of 24-1 px.
-	          }
+	        if (nodePrev && !nodePrev.parent) {
+	            nodePrev = undefined;
 	        }
 
-	        trNext = trNext.nextSibling;
-	      }
-	      while (trNext && mouseY > topThis + heightNext);
-
-	      if (nodeNext && nodeNext.parent) {
-	        // calculate the desired level
-	        var diffX = (mouseX - this.drag.mouseX);
-	        var diffLevel = Math.round(diffX / 24 / 2);
-	        var level = this.drag.level + diffLevel; // desired level
-	        var levelNext = nodeNext.getLevel();     // level to be
-
-	        // find the best fitting level (move upwards over the append nodes)
-	        trPrev = nodeNext.dom.tr.previousSibling;
-	        while (levelNext < level && trPrev) {
-	          nodePrev = Node.getNodeFromTarget(trPrev);
-	          if (nodePrev == this || nodePrev._isChildOf(this)) {
-	            // neglect itself and its childs
-	          }
-	          else if (nodePrev instanceof AppendNode) {
-	            var childs = nodePrev.parent.childs;
-	            if (childs.length > 1 ||
-	                (childs.length == 1 && childs[0] != this)) {
-	              // non-visible append node of a list of childs
-	              // consisting of not only this node (else the
-	              // append node will change into a visible "empty"
-	              // text when removing this node).
-	              nodeNext = Node.getNodeFromTarget(trPrev);
-	              levelNext = nodeNext.getLevel();
+	        if (!nodePrev) {
+	            // move to the first node
+	            trRoot = trThis.parentNode.firstChild;
+	            trPrev = trRoot ? trRoot.nextSibling : undefined;
+	            nodePrev = Node.getNodeFromTarget(trPrev);
+	            if (nodePrev == this) {
+	                nodePrev = undefined;
 	            }
-	            else {
-	              break;
+	        }
+
+	        if (nodePrev) {
+	            // check if mouseY is really inside the found node
+	            trPrev = nodePrev.dom.tr;
+	            topPrev = trPrev ? util.getAbsoluteTop(trPrev) : 0;
+	            if (mouseY > topPrev + heightThis) {
+	                nodePrev = undefined;
 	            }
-	          }
-	          else {
-	            break;
-	          }
-
-	          trPrev = trPrev.previousSibling;
 	        }
 
-	        // move the node when its position is changed
-	        if (trLast.nextSibling != nodeNext.dom.tr) {
-	          nodeNext.parent.moveBefore(this, nodeNext);
-	          moved = true;
+	        if (nodePrev) {
+	            nodePrev.parent.moveBefore(this, nodePrev);
+	            moved = true;
 	        }
-	      }
+	    } else {
+	        // move down
+	        trLast = (this.expanded && this.append) ? this.append.getDom() : this.dom.tr;
+	        trFirst = trLast ? trLast.nextSibling : undefined;
+	        if (trFirst) {
+	            topFirst = util.getAbsoluteTop(trFirst);
+	            trNext = trFirst;
+	            do {
+	                nodeNext = Node.getNodeFromTarget(trNext);
+	                if (trNext) {
+	                    bottomNext = trNext.nextSibling ?
+	                        util.getAbsoluteTop(trNext.nextSibling) : 0;
+	                    heightNext = trNext ? (bottomNext - topFirst) : 0;
+
+	                    if (nodeNext.parent.childs.length == 1 && nodeNext.parent.childs[0] == this) {
+	                        // We are about to remove the last child of this parent,
+	                        // which will make the parents appendNode visible.
+	                        topThis += 24 - 1;
+	                        // TODO: dangerous to suppose the height of the appendNode a constant of 24-1 px.
+	                    }
+	                }
+
+	                trNext = trNext.nextSibling;
+	            }
+	            while (trNext && mouseY > topThis + heightNext);
+
+	            if (nodeNext && nodeNext.parent) {
+	                // calculate the desired level
+	                var diffX = (mouseX - this.drag.mouseX);
+	                var diffLevel = Math.round(diffX / 24 / 2);
+	                var level = this.drag.level + diffLevel; // desired level
+	                var levelNext = nodeNext.getLevel(); // level to be
+
+	                // find the best fitting level (move upwards over the append nodes)
+	                trPrev = nodeNext.dom.tr.previousSibling;
+	                while (levelNext < level && trPrev) {
+	                    nodePrev = Node.getNodeFromTarget(trPrev);
+	                    if (nodePrev == this || nodePrev._isChildOf(this)) {
+	                        // neglect itself and its childs
+	                    } else if (nodePrev instanceof AppendNode) {
+	                        var childs = nodePrev.parent.childs;
+	                        if (childs.length > 1 ||
+	                            (childs.length == 1 && childs[0] != this)) {
+	                            // non-visible append node of a list of childs
+	                            // consisting of not only this node (else the
+	                            // append node will change into a visible "empty"
+	                            // text when removing this node).
+	                            nodeNext = Node.getNodeFromTarget(trPrev);
+	                            levelNext = nodeNext.getLevel();
+	                        } else {
+	                            break;
+	                        }
+	                    } else {
+	                        break;
+	                    }
+
+	                    trPrev = trPrev.previousSibling;
+	                }
+
+	                // move the node when its position is changed
+	                if (trLast.nextSibling != nodeNext.dom.tr) {
+	                    nodeNext.parent.moveBefore(this, nodeNext);
+	                    moved = true;
+	                }
+	            }
+	        }
 	    }
-	  }
 
-	  if (moved) {
-	    // update the dragging parameters when moved
-	    this.drag.mouseX = mouseX;
-	    this.drag.level = this.getLevel();
-	  }
+	    if (moved) {
+	        // update the dragging parameters when moved
+	        this.drag.mouseX = mouseX;
+	        this.drag.level = this.getLevel();
+	    }
 
-	  // auto scroll when hovering around the top of the editor
-	  this.editor.startAutoScroll(mouseY);
+	    // auto scroll when hovering around the top of the editor
+	    this.editor.startAutoScroll(mouseY);
 
-	  event.preventDefault();
+	    event.preventDefault();
 	};
 
 	/**
@@ -4104,35 +4183,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onDragEnd = function (event) {
-	  var params = {
-	    'node': this,
-	    'startParent': this.drag.startParent,
-	    'startIndex': this.drag.startIndex,
-	    'endParent': this.parent,
-	    'endIndex': this.parent.childs.indexOf(this)
-	  };
-	  if ((params.startParent != params.endParent) ||
-	      (params.startIndex != params.endIndex)) {
-	    // only register this action if the node is actually moved to another place
-	    this.editor._onAction('moveNode', params);
-	  }
+	    var params = {
+	        'node': this,
+	        'startParent': this.drag.startParent,
+	        'startIndex': this.drag.startIndex,
+	        'endParent': this.parent,
+	        'endIndex': this.parent.childs.indexOf(this)
+	    };
+	    if ((params.startParent != params.endParent) ||
+	        (params.startIndex != params.endIndex)) {
+	        // only register this action if the node is actually moved to another place
+	        this.editor._onAction('moveNode', params);
+	    }
 
-	  document.body.style.cursor = this.drag.oldCursor;
-	  this.editor.highlighter.unlock();
-	  delete this.drag;
+	    document.body.style.cursor = this.drag.oldCursor;
+	    this.editor.highlighter.unlock();
+	    delete this.drag;
 
-	  if (this.mousemove) {
-	    util.removeEventListener(document, 'mousemove', this.mousemove);
-	    delete this.mousemove;}
-	  if (this.mouseup) {
-	    util.removeEventListener(document, 'mouseup', this.mouseup);
-	    delete this.mouseup;
-	  }
+	    if (this.mousemove) {
+	        util.removeEventListener(document, 'mousemove', this.mousemove);
+	        delete this.mousemove;
+	    }
+	    if (this.mouseup) {
+	        util.removeEventListener(document, 'mouseup', this.mouseup);
+	        delete this.mouseup;
+	    }
 
-	  // Stop any running auto scroll
-	  this.editor.stopAutoScroll();
+	    // Stop any running auto scroll
+	    this.editor.stopAutoScroll();
 
-	  event.preventDefault();
+	    event.preventDefault();
 	};
 
 	/**
@@ -4142,15 +4222,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._isChildOf = function (node) {
-	  var n = this.parent;
-	  while (n) {
-	    if (n == node) {
-	      return true;
+	    var n = this.parent;
+	    while (n) {
+	        if (n == node) {
+	            return true;
+	        }
+	        n = n.parent;
 	    }
-	    n = n.parent;
-	  }
 
-	  return false;
+	    return false;
 	};
 
 	/**
@@ -4159,7 +4239,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._createDomField = function () {
-	  return document.createElement('div');
+	    return document.createElement('div');
 	};
 
 	/**
@@ -4168,19 +4248,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {boolean} highlight
 	 */
 	Node.prototype.setHighlight = function (highlight) {
-	  if (this.dom.tr) {
-	    this.dom.tr.className = (highlight ? 'highlight' : '');
+	    if (this.dom.tr) {
+	        this.dom.tr.className = (highlight ? 'highlight' : '');
 
-	    if (this.append) {
-	      this.append.setHighlight(highlight);
-	    }
+	        if (this.append) {
+	            this.append.setHighlight(highlight);
+	        }
 
-	    if (this.childs) {
-	      this.childs.forEach(function (child) {
-	        child.setHighlight(highlight);
-	      });
+	        if (this.childs) {
+	            this.childs.forEach(function (child) {
+	                child.setHighlight(highlight);
+	            });
+	        }
 	    }
-	  }
 	};
 
 	/**
@@ -4189,8 +4269,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String | Number | Boolean | null} value
 	 */
 	Node.prototype.updateValue = function (value) {
-	  this.value = value;
-	  this.updateDom();
+	    this.value = value;
+	    this.updateDom();
 	};
 
 	/**
@@ -4198,8 +4278,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {String} field
 	 */
 	Node.prototype.updateField = function (field) {
-	  this.field = field;
-	  this.updateDom();
+	    this.field = field;
+	    this.updateDom();
 	};
 
 	/**
@@ -4213,80 +4293,74 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                          default.
 	 */
 	Node.prototype.updateDom = function (options) {
-	  // update level indentation
-	  var domTree = this.dom.tree;
-	  if (domTree) {
-	    domTree.style.marginLeft = this.getLevel() * 24 + 'px';
-	  }
-
-	  // update field
-	  var domField = this.dom.field;
-	  if (domField) {
-	    if (this.fieldEditable) {
-	      // parent is an object
-	      domField.contentEditable = this.editable.field;
-	      domField.spellcheck = false;
-	      domField.className = 'field';
-	    }
-	    else {
-	      // parent is an array this is the root node
-	      domField.className = 'readonly';
+	    // update level indentation
+	    var domTree = this.dom.tree;
+	    if (domTree) {
+	        domTree.style.marginLeft = this.getLevel() * 24 + 'px';
 	    }
 
-	    var field;
-	    if (this.index != undefined) {
-	      field = this.index;
-	    }
-	    else if (this.field != undefined) {
-	      field = this.field;
-	    }
-	    else if (this._hasChilds()) {
-	      field = this.type;
-	    }
-	    else {
-	      field = '';
-	    }
-	    domField.innerHTML = this._escapeHTML(field);
-	  }
+	    // update field
+	    var domField = this.dom.field;
+	    if (domField) {
+	        if (this.fieldEditable) {
+	            // parent is an object
+	            domField.contentEditable = this.editable.field;
+	            domField.spellcheck = false;
+	            domField.className = 'field';
+	        } else {
+	            // parent is an array this is the root node
+	            domField.className = 'readonly';
+	        }
 
-	  // update value
-	  var domValue = this.dom.value;
-	  if (domValue) {
-	    var count = this.childs ? this.childs.length : 0;
-	    if (this.type == 'array') {
-	      domValue.innerHTML = '[' + count + ']';
+	        var field;
+	        if (this.index != undefined) {
+	            field = this.index;
+	        } else if (this.field != undefined) {
+	            field = this.field;
+	        } else if (this._hasChilds()) {
+	            field = this.type;
+	        } else {
+	            field = '';
+	        }
+	        domField.innerHTML = this._escapeHTML(field);
 	    }
-	    else if (this.type == 'object') {
-	      domValue.innerHTML = '{' + count + '}';
+
+	    // update value
+	    var domValue = this.dom.value;
+	    if (domValue) {
+	        var count = this.childs ? this.childs.length : 0;
+	        if (this.type == 'array') {
+	            domValue.innerHTML = '[' + count + ']';
+	        } else if (this.type == 'object') {
+	            domValue.innerHTML = '{' + count + '}';
+	        } else {
+	            domValue.innerHTML = this._escapeHTML(this.value);
+	        }
 	    }
-	    else {
-	      domValue.innerHTML = this._escapeHTML(this.value);
+
+	    // update field and value
+	    this._updateDomField();
+	    this._updateDomValue();
+
+	    // update childs indexes
+	    if (options && options.updateIndexes === true) {
+	        // updateIndexes is true or undefined
+	        this._updateDomIndexes();
 	    }
-	  }
 
-	  // update field and value
-	  this._updateDomField();
-	  this._updateDomValue();
-
-	  // update childs indexes
-	  if (options && options.updateIndexes === true) {
-	    // updateIndexes is true or undefined
-	    this._updateDomIndexes();
-	  }
-
-	  if (options && options.recurse === true) {
-	    // recurse is true or undefined. update childs recursively
-	    if (this.childs) {
-	      this.childs.forEach(function (child) {
-	        child.updateDom(options);
-	      });
+	    if (options && options.recurse === true) {
+	        // recurse is true or undefined. update childs recursively
+	        if (this.childs) {
+	            this.childs.forEach(function (child) {
+	                child.updateDom(options);
+	            });
+	        }
 	    }
-	  }
 
-	  // update row with append button
-	  if (this.append) {
-	    this.append.updateDom();
-	  }
+	    // update row with append button
+	    if (this.append) {
+	        this.append.updateDom();
+	    }
 	};
 
 	/**
@@ -4296,30 +4370,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._updateDomIndexes = function () {
-	  var domValue = this.dom.value;
-	  var childs = this.childs;
-	  if (domValue && childs) {
-	    if (this.type == 'array') {
-	      childs.forEach(function (child, index) {
-	        child.index = index;
-	        var childField = child.dom.field;
-	        if (childField) {
-	          childField.innerHTML = index;
-	        }
-	      });
-	    }
-	    else if (this.type == 'object') {
-	      childs.forEach(function (child) {
-	        if (child.index != undefined) {
-	          delete child.index;
+	    var domValue = this.dom.value;
+	    var childs = this.childs;
+	    if (domValue && childs) {
+	        if (this.type == 'array') {
+	            childs.forEach(function (child, index) {
+	                child.index = index;
+	                var childField = child.dom.field;
+	                if (childField) {
+	                    childField.innerHTML = index;
+	                }
+	            });
+	        } else if (this.type == 'object') {
+	            childs.forEach(function (child) {
+	                if (child.index != undefined) {
+	                    delete child.index;
 
-	          if (child.field == undefined) {
-	            child.field = '';
-	          }
+	                    if (child.field == undefined) {
+	                        child.field = '';
+	                    }
+	                }
+	            });
 	        }
-	      });
 	    }
-	  }
 	};
 
 	/**
@@ -4327,38 +4400,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._createDomValue = function () {
-	  var domValue;
+	    var domValue;
 
-	  if (this.type == 'array') {
-	    domValue = document.createElement('div');
-	    domValue.className = 'readonly';
-	    domValue.innerHTML = '[...]';
-	  }
-	  else if (this.type == 'object') {
-	    domValue = document.createElement('div');
-	    domValue.className = 'readonly';
-	    domValue.innerHTML = '{...}';
-	  }
-	  else {
-	    if (!this.editable.value && util.isUrl(this.value)) {
-	      // create a link in case of read-only editor and value containing an url
-	      domValue = document.createElement('a');
-	      domValue.className = 'value';
-	      domValue.href = this.value;
-	      domValue.target = '_blank';
-	      domValue.innerHTML = this._escapeHTML(this.value);
+	    if (this.type == 'array') {
+	        domValue = document.createElement('div');
+	        domValue.className = 'readonly';
+	        domValue.innerHTML = '[...]';
+	    } else if (this.type == 'object') {
+	        domValue = document.createElement('div');
+	        domValue.className = 'readonly';
+	        domValue.innerHTML = '{...}';
+	    } else {
+	        if (!this.editable.value && util.isUrl(this.value)) {
+	            // create a link in case of read-only editor and value containing an url
+	            domValue = document.createElement('a');
+	            domValue.className = 'value';
+	            domValue.href = this.value;
+	            domValue.target = '_blank';
+	            domValue.innerHTML = this._escapeHTML(this.value);
+	        } else {
+	            // create an editable or read-only div
+	            domValue = document.createElement('div');
+	            domValue.contentEditable = this.editable.value;
+	            domValue.spellcheck = false;
+	            domValue.className = 'value';
+	            domValue.innerHTML = this._escapeHTML(this.value);
+	        }
 	    }
-	    else {
-	      // create an editable or read-only div
-	      domValue = document.createElement('div');
-	      domValue.contentEditable = this.editable.value;
-	      domValue.spellcheck = false;
-	      domValue.className = 'value';
-	      domValue.innerHTML = this._escapeHTML(this.value);
-	    }
-	  }
 
-	  return domValue;
+	    return domValue;
 	};
 
 	/**
@@ -4367,20 +4437,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._createDomExpandButton = function () {
-	  // create expand button
-	  var expand = document.createElement('button');
-	  if (this._hasChilds()) {
-	    expand.className = this.expanded ? 'expanded' : 'collapsed';
-	    expand.title =
-	        'Click to expand/collapse this field (Ctrl+E). \n' +
-	        'Ctrl+Click to expand/collapse including all childs.';
-	  }
-	  else {
-	    expand.className = 'invisible';
-	    expand.title = '';
-	  }
+	    // create expand button
+	    var expand = document.createElement('button');
+	    if (this._hasChilds()) {
+	        expand.className = this.expanded ? 'expanded' : 'collapsed';
+	        expand.title =
+	            'Click to expand/collapse this field (Ctrl+E). \n' +
+	            'Ctrl+Click to expand/collapse including all childs.';
+	    } else {
+	        expand.className = 'invisible';
+	        expand.title = '';
+	    }
 
-	  return expand;
+	    return expand;
 	};
 
 
@@ -4390,50 +4459,50 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._createDomTree = function () {
-	  var dom = this.dom;
-	  var domTree = document.createElement('table');
-	  var tbody = document.createElement('tbody');
-	  domTree.style.borderCollapse = 'collapse'; // TODO: put in css
-	  domTree.className = 'values';
-	  domTree.appendChild(tbody);
-	  var tr = document.createElement('tr');
-	  tbody.appendChild(tr);
+	    var dom = this.dom;
+	    var domTree = document.createElement('table');
+	    var tbody = document.createElement('tbody');
+	    domTree.style.borderCollapse = 'collapse'; // TODO: put in css
+	    domTree.className = 'values';
+	    domTree.appendChild(tbody);
+	    var tr = document.createElement('tr');
+	    tbody.appendChild(tr);
 
-	  // create expand button
-	  var tdExpand = document.createElement('td');
-	  tdExpand.className = 'tree';
-	  tr.appendChild(tdExpand);
-	  dom.expand = this._createDomExpandButton();
-	  tdExpand.appendChild(dom.expand);
-	  dom.tdExpand = tdExpand;
+	    // create expand button
+	    var tdExpand = document.createElement('td');
+	    tdExpand.className = 'tree';
+	    tr.appendChild(tdExpand);
+	    dom.expand = this._createDomExpandButton();
+	    tdExpand.appendChild(dom.expand);
+	    dom.tdExpand = tdExpand;
 
-	  // create the field
-	  var tdField = document.createElement('td');
-	  tdField.className = 'tree';
-	  tr.appendChild(tdField);
-	  dom.field = this._createDomField();
-	  tdField.appendChild(dom.field);
-	  dom.tdField = tdField;
+	    // create the field
+	    var tdField = document.createElement('td');
+	    tdField.className = 'tree';
+	    tr.appendChild(tdField);
+	    dom.field = this._createDomField();
+	    tdField.appendChild(dom.field);
+	    dom.tdField = tdField;
 
-	  // create a separator
-	  var tdSeparator = document.createElement('td');
-	  tdSeparator.className = 'tree';
-	  tr.appendChild(tdSeparator);
-	  if (this.type != 'object' && this.type != 'array') {
-	    tdSeparator.appendChild(document.createTextNode(':'));
-	    tdSeparator.className = 'separator';
-	  }
-	  dom.tdSeparator = tdSeparator;
+	    // create a separator
+	    var tdSeparator = document.createElement('td');
+	    tdSeparator.className = 'tree';
+	    tr.appendChild(tdSeparator);
+	    if (this.type != 'object' && this.type != 'array') {
+	        tdSeparator.appendChild(document.createTextNode(':'));
+	        tdSeparator.className = 'separator';
+	    }
+	    dom.tdSeparator = tdSeparator;
 
-	  // create the value
-	  var tdValue = document.createElement('td');
-	  tdValue.className = 'tree';
-	  tr.appendChild(tdValue);
-	  dom.value = this._createDomValue();
-	  tdValue.appendChild(dom.value);
-	  dom.tdValue = tdValue;
+	    // create the value
+	    var tdValue = document.createElement('td');
+	    tdValue.className = 'tree';
+	    tr.appendChild(tdValue);
+	    dom.value = this._createDomValue();
+	    tdValue.appendChild(dom.value);
+	    dom.tdValue = tdValue;
 
-	  return domTree;
+	    return domTree;
 	};
 
 	/**
@@ -4441,183 +4510,181 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Event} event
 	 */
 	Node.prototype.onEvent = function (event) {
-	  var type = event.type,
-	      target = event.target || event.srcElement,
-	      dom = this.dom,
-	      node = this,
-	      focusNode,
-	      expandable = this._hasChilds();
+	    var type = event.type,
+	        target = event.target || event.srcElement,
+	        dom = this.dom,
+	        node = this,
+	        focusNode,
+	        expandable = this._hasChilds();
 
-	  // check if mouse is on menu or on dragarea.
-	  // If so, highlight current row and its childs
-	  if (target == dom.drag || target == dom.menu) {
-	    if (type == 'mouseover') {
-	      this.editor.highlighter.highlight(this);
-	    }
-	    else if (type == 'mouseout') {
-	      this.editor.highlighter.unhighlight();
-	    }
-	  }
-
-	  // drag events
-	  if (type == 'mousedown' && target == dom.drag) {
-	    this._onDragStart(event);
-	  }
-
-	  // context menu events
-	  if (type == 'click' && target == dom.menu) {
-	    var highlighter = node.editor.highlighter;
-	    highlighter.highlight(node);
-	    highlighter.lock();
-	    util.addClassName(dom.menu, 'selected');
-	    this.showContextMenu(dom.menu, function () {
-	      util.removeClassName(dom.menu, 'selected');
-	      highlighter.unlock();
-	      highlighter.unhighlight();
-	    });
-	  }
-
-	  // expand events
-	  if (type == 'click' && target == dom.expand) {
-	    if (expandable) {
-	      var recurse = event.ctrlKey; // with ctrl-key, expand/collapse all
-	      this._onExpand(recurse);
-	    }
-	  }
-
-	  // value events
-	  var domValue = dom.value;
-	  if (target == domValue) {
-	    //noinspection FallthroughInSwitchStatementJS
-	    switch (type) {
-	      case 'focus':
-	        focusNode = this;
-	        break;
-
-	      case 'blur':
-	      case 'change':
-	        this._getDomValue(true);
-	        this._updateDomValue();
-	        if (this.value) {
-	          domValue.innerHTML = this._escapeHTML(this.value);
+	    // check if mouse is on menu or on dragarea.
+	    // If so, highlight current row and its childs
+	    if (target == dom.drag || target == dom.menu) {
+	        if (type == 'mouseover') {
+	            this.editor.highlighter.highlight(this);
+	        } else if (type == 'mouseout') {
+	            this.editor.highlighter.unhighlight();
 	        }
-	        break;
-
-	      case 'input':
-	        this._getDomValue(true);
-	        this._updateDomValue();
-	        break;
-
-	      case 'keydown':
-	      case 'mousedown':
-	        this.editor.selection = this.editor.getSelection();
-	        break;
-
-	      case 'click':
-	        if (event.ctrlKey || !this.editable.value) {
-	          if (util.isUrl(this.value)) {
-	            window.open(this.value, '_blank');
-	          }
-	        }
-	        break;
-
-	      case 'keyup':
-	        this._getDomValue(true);
-	        this._updateDomValue();
-	        break;
-
-	      case 'cut':
-	      case 'paste':
-	        setTimeout(function () {
-	          node._getDomValue(true);
-	          node._updateDomValue();
-	        }, 1);
-	        break;
 	    }
-	  }
 
-	  // field events
-	  var domField = dom.field;
-	  if (target == domField) {
-	    switch (type) {
-	      case 'focus':
-	        focusNode = this;
-	        break;
-
-	      case 'blur':
-	      case 'change':
-	        this._getDomField(true);
-	        this._updateDomField();
-	        if (this.field) {
-	          domField.innerHTML = this._escapeHTML(this.field);
-	        }
-	        break;
-
-	      case 'input':
-	        this._getDomField(true);
-	        this._updateDomField();
-	        break;
-
-	      case 'keydown':
-	      case 'mousedown':
-	        this.editor.selection = this.editor.getSelection();
-	        break;
-
-	      case 'keyup':
-	        this._getDomField(true);
-	        this._updateDomField();
-	        break;
-
-	      case 'cut':
-	      case 'paste':
-	        setTimeout(function () {
-	          node._getDomField(true);
-	          node._updateDomField();
-	        }, 1);
-	        break;
+	    // drag events
+	    if (type == 'mousedown' && target == dom.drag) {
+	        this._onDragStart(event);
 	    }
-	  }
 
-	  // focus
-	  // when clicked in whitespace left or right from the field or value, set focus
-	  var domTree = dom.tree;
-	  if (target == domTree.parentNode) {
-	    switch (type) {
-	      case 'click':
-	        var left = (event.offsetX != undefined) ?
-	            (event.offsetX < (this.getLevel() + 1) * 24) :
-	            (event.pageX < util.getAbsoluteLeft(dom.tdSeparator));// for FF
-	        if (left || expandable) {
-	          // node is expandable when it is an object or array
-	          if (domField) {
-	            util.setEndOfContentEditable(domField);
-	            domField.focus();
-	          }
-	        }
-	        else {
-	          if (domValue) {
-	            util.setEndOfContentEditable(domValue);
-	            domValue.focus();
-	          }
-	        }
-	        break;
+	    // context menu events
+	    if (type == 'click' && target == dom.menu) {
+	        var highlighter = node.editor.highlighter;
+	        highlighter.highlight(node);
+	        highlighter.lock();
+	        util.addClassName(dom.menu, 'selected');
+	        this.showContextMenu(dom.menu, function () {
+	            util.removeClassName(dom.menu, 'selected');
+	            highlighter.unlock();
+	            highlighter.unhighlight();
+	        });
 	    }
-	  }
-	  if ((target == dom.tdExpand && !expandable) || target == dom.tdField ||
-	      target == dom.tdSeparator) {
-	    switch (type) {
-	      case 'click':
-	        if (domField) {
-	          util.setEndOfContentEditable(domField);
-	          domField.focus();
-	        }
-	        break;
-	    }
-	  }
 
-	  if (type == 'keydown') {
-	    this.onKeyDown(event);
-	  }
+	    // expand events
+	    if (type == 'click' && target == dom.expand) {
+	        if (expandable) {
+	            var recurse = event.ctrlKey; // with ctrl-key, expand/collapse all
+	            this._onExpand(recurse);
+	        }
+	    }
+
+	    // value events
+	    var domValue = dom.value;
+	    if (target == domValue) {
+	        //noinspection FallthroughInSwitchStatementJS
+	        switch (type) {
+	        case 'focus':
+	            focusNode = this;
+	            break;
+
+	        case 'blur':
+	        case 'change':
+	            this._getDomValue(true);
+	            this._updateDomValue();
+	            if (this.value) {
+	                domValue.innerHTML = this._escapeHTML(this.value);
+	            }
+	            break;
+
+	        case 'input':
+	            this._getDomValue(true);
+	            this._updateDomValue();
+	            break;
+
+	        case 'keydown':
+	        case 'mousedown':
+	            this.editor.selection = this.editor.getSelection();
+	            break;
+
+	        case 'click':
+	            if (event.ctrlKey || !this.editable.value) {
+	                if (util.isUrl(this.value)) {
+	                    window.open(this.value, '_blank');
+	                }
+	            }
+	            break;
+
+	        case 'keyup':
+	            this._getDomValue(true);
+	            this._updateDomValue();
+	            break;
+
+	        case 'cut':
+	        case 'paste':
+	            setTimeout(function () {
+	                node._getDomValue(true);
+	                node._updateDomValue();
+	            }, 1);
+	            break;
+	        }
+	    }
+
+	    // field events
+	    var domField = dom.field;
+	    if (target == domField) {
+	        switch (type) {
+	        case 'focus':
+	            focusNode = this;
+	            break;
+
+	        case 'blur':
+	        case 'change':
+	            this._getDomField(true);
+	            this._updateDomField();
+	            if (this.field) {
+	                domField.innerHTML = this._escapeHTML(this.field);
+	            }
+	            break;
+
+	        case 'input':
+	            this._getDomField(true);
+	            this._updateDomField();
+	            break;
+
+	        case 'keydown':
+	        case 'mousedown':
+	            this.editor.selection = this.editor.getSelection();
+	            break;
+
+	        case 'keyup':
+	            this._getDomField(true);
+	            this._updateDomField();
+	            break;
+
+	        case 'cut':
+	        case 'paste':
+	            setTimeout(function () {
+	                node._getDomField(true);
+	                node._updateDomField();
+	            }, 1);
+	            break;
+	        }
+	    }
+
+	    // focus
+	    // when clicked in whitespace left or right from the field or value, set focus
+	    var domTree = dom.tree;
+	    if (target == domTree.parentNode) {
+	        switch (type) {
+	        case 'click':
+	            var left = (event.offsetX != undefined) ?
+	                (event.offsetX < (this.getLevel() + 1) * 24) :
+	                (event.pageX < util.getAbsoluteLeft(dom.tdSeparator)); // for FF
+	            if (left || expandable) {
+	                // node is expandable when it is an object or array
+	                if (domField) {
+	                    util.setEndOfContentEditable(domField);
+	                    domField.focus();
+	                }
+	            } else {
+	                if (domValue) {
+	                    util.setEndOfContentEditable(domValue);
+	                    domValue.focus();
+	                }
+	            }
+	            break;
+	        }
+	    }
+	    if ((target == dom.tdExpand && !expandable) || target == dom.tdField ||
+	        target == dom.tdSeparator) {
+	        switch (type) {
+	        case 'click':
+	            if (domField) {
+	                util.setEndOfContentEditable(domField);
+	                domField.focus();
+	            }
+	            break;
+	        }
+	    }
+
+	    if (type == 'keydown') {
+	        this.onKeyDown(event);
+	    }
 	};
 
 	/**
@@ -4625,200 +4692,179 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param {Event} event
 	 */
 	Node.prototype.onKeyDown = function (event) {
-	  var keynum = event.which || event.keyCode;
-	  var target = event.target || event.srcElement;
-	  var ctrlKey = event.ctrlKey;
-	  var shiftKey = event.shiftKey;
-	  var altKey = event.altKey;
-	  var handled = false;
-	  var prevNode, nextNode, nextDom, nextDom2;
-	  var editable = this.editor.options.mode === 'tree';
+	    var keynum = event.which || event.keyCode;
+	    var target = event.target || event.srcElement;
+	    var ctrlKey = event.ctrlKey;
+	    var shiftKey = event.shiftKey;
+	    var altKey = event.altKey;
+	    var handled = false;
+	    var prevNode, nextNode, nextDom, nextDom2;
+	    var editable = this.editor.options.mode === 'tree';
 
-	  // util.log(ctrlKey, keynum, event.charCode); // TODO: cleanup
-	  if (keynum == 13) { // Enter
-	    if (target == this.dom.value) {
-	      if (!this.editable.value || event.ctrlKey) {
-	        if (util.isUrl(this.value)) {
-	          window.open(this.value, '_blank');
-	          handled = true;
+	    // util.log(ctrlKey, keynum, event.charCode); // TODO: cleanup
+	    if (keynum == 13) { // Enter
+	        if (target == this.dom.value) {
+	            if (!this.editable.value || event.ctrlKey) {
+	                if (util.isUrl(this.value)) {
+	                    window.open(this.value, '_blank');
+	                    handled = true;
+	                }
+	            }
+	        } else if (target == this.dom.expand) {
+	            var expandable = this._hasChilds();
+	            if (expandable) {
+	                var recurse = event.ctrlKey; // with ctrl-key, expand/collapse all
+	                this._onExpand(recurse);
+	                target.focus();
+	                handled = true;
+	            }
 	        }
-	      }
-	    }
-	    else if (target == this.dom.expand) {
-	      var expandable = this._hasChilds();
-	      if (expandable) {
-	        var recurse = event.ctrlKey; // with ctrl-key, expand/collapse all
-	        this._onExpand(recurse);
-	        target.focus();
-	        handled = true;
-	      }
-	    }
-	  }
-	  else if (keynum == 68) {  // D
-	    if (ctrlKey && editable) {   // Ctrl+D
-	      this._onDuplicate();
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 69) { // E
-	    if (ctrlKey) {       // Ctrl+E and Ctrl+Shift+E
-	      this._onExpand(shiftKey);  // recurse = shiftKey
-	      target.focus(); // TODO: should restore focus in case of recursing expand (which takes DOM offline)
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 77 && editable) { // M
-	    if (ctrlKey) { // Ctrl+M
-	      this.showContextMenu(target);
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 46 && editable) { // Del
-	    if (ctrlKey) {       // Ctrl+Del
-	      this._onRemove();
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 45 && editable) { // Ins
-	    if (ctrlKey && !shiftKey) {       // Ctrl+Ins
-	      this._onInsertBefore();
-	      handled = true;
-	    }
-	    else if (ctrlKey && shiftKey) {   // Ctrl+Shift+Ins
-	      this._onInsertAfter();
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 35) { // End
-	    if (altKey) { // Alt+End
-	      // find the last node
-	      var lastNode = this._lastNode();
-	      if (lastNode) {
-	        lastNode.focus(Node.focusElement || this._getElementName(target));
-	      }
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 36) { // Home
-	    if (altKey) { // Alt+Home
-	      // find the first node
-	      var firstNode = this._firstNode();
-	      if (firstNode) {
-	        firstNode.focus(Node.focusElement || this._getElementName(target));
-	      }
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 37) {        // Arrow Left
-	    if (altKey && !shiftKey) {  // Alt + Arrow Left
-	      // move to left element
-	      var prevElement = this._previousElement(target);
-	      if (prevElement) {
-	        this.focus(this._getElementName(prevElement));
-	      }
-	      handled = true;
-	    }
-	    else if (altKey && shiftKey && editable) { // Alt + Shift Arrow left
-	      if (this.expanded) {
-	        var appendDom = this.getAppend();
-	        nextDom = appendDom ? appendDom.nextSibling : undefined;
-	      }
-	      else {
-	        var dom = this.getDom();
-	        nextDom = dom.nextSibling;
-	      }
-	      if (nextDom) {
-	        nextNode = Node.getNodeFromTarget(nextDom);
-	        nextDom2 = nextDom.nextSibling;
-	        nextNode2 = Node.getNodeFromTarget(nextDom2);
-	        if (nextNode && nextNode instanceof AppendNode &&
-	            !(this.parent.childs.length == 1) &&
-	            nextNode2 && nextNode2.parent) {
-	          nextNode2.parent.moveBefore(this, nextNode2);
-	          this.focus(Node.focusElement || this._getElementName(target));
+	    } else if (keynum == 68) { // D
+	        if (ctrlKey && editable) { // Ctrl+D
+	            this._onDuplicate();
+	            handled = true;
 	        }
-	      }
-	    }
-	  }
-	  else if (keynum == 38) {        // Arrow Up
-	    if (altKey && !shiftKey) {  // Alt + Arrow Up
-	      // find the previous node
-	      prevNode = this._previousNode();
-	      if (prevNode) {
-	        prevNode.focus(Node.focusElement || this._getElementName(target));
-	      }
-	      handled = true;
-	    }
-	    else if (altKey && shiftKey) { // Alt + Shift + Arrow Up
-	      // find the previous node
-	      prevNode = this._previousNode();
-	      if (prevNode && prevNode.parent) {
-	        prevNode.parent.moveBefore(this, prevNode);
-	        this.focus(Node.focusElement || this._getElementName(target));
-	      }
-	      handled = true;
-	    }
-	  }
-	  else if (keynum == 39) {        // Arrow Right
-	    if (altKey && !shiftKey) {  // Alt + Arrow Right
-	      // move to right element
-	      var nextElement = this._nextElement(target);
-	      if (nextElement) {
-	        this.focus(this._getElementName(nextElement));
-	      }
-	      handled = true;
-	    }
-	    else if (altKey && shiftKey) { // Alt + Shift Arrow Right
-	      dom = this.getDom();
-	      var prevDom = dom.previousSibling;
-	      if (prevDom) {
-	        prevNode = Node.getNodeFromTarget(prevDom);
-	        if (prevNode && prevNode.parent &&
-	            (prevNode instanceof AppendNode)
-	            && !prevNode.isVisible()) {
-	          prevNode.parent.moveBefore(this, prevNode);
-	          this.focus(Node.focusElement || this._getElementName(target));
+	    } else if (keynum == 69) { // E
+	        if (ctrlKey) { // Ctrl+E and Ctrl+Shift+E
+	            this._onExpand(shiftKey); // recurse = shiftKey
+	            target.focus(); // TODO: should restore focus in case of recursing expand (which takes DOM offline)
+	            handled = true;
 	        }
-	      }
+	    } else if (keynum == 77 && editable) { // M
+	        if (ctrlKey) { // Ctrl+M
+	            this.showContextMenu(target);
+	            handled = true;
+	        }
+	    } else if (keynum == 46 && editable) { // Del
+	        if (ctrlKey) { // Ctrl+Del
+	            this._onRemove();
+	            handled = true;
+	        }
+	    } else if (keynum == 45 && editable) { // Ins
+	        if (ctrlKey && !shiftKey) { // Ctrl+Ins
+	            this._onInsertBefore();
+	            handled = true;
+	        } else if (ctrlKey && shiftKey) { // Ctrl+Shift+Ins
+	            this._onInsertAfter();
+	            handled = true;
+	        }
+	    } else if (keynum == 35) { // End
+	        if (altKey) { // Alt+End
+	            // find the last node
+	            var lastNode = this._lastNode();
+	            if (lastNode) {
+	                lastNode.focus(Node.focusElement || this._getElementName(target));
+	            }
+	            handled = true;
+	        }
+	    } else if (keynum == 36) { // Home
+	        if (altKey) { // Alt+Home
+	            // find the first node
+	            var firstNode = this._firstNode();
+	            if (firstNode) {
+	                firstNode.focus(Node.focusElement || this._getElementName(target));
+	            }
+	            handled = true;
+	        }
+	    } else if (keynum == 37) { // Arrow Left
+	        if (altKey && !shiftKey) { // Alt + Arrow Left
+	            // move to left element
+	            var prevElement = this._previousElement(target);
+	            if (prevElement) {
+	                this.focus(this._getElementName(prevElement));
+	            }
+	            handled = true;
+	        } else if (altKey && shiftKey && editable) { // Alt + Shift Arrow left
+	            if (this.expanded) {
+	                var appendDom = this.getAppend();
+	                nextDom = appendDom ? appendDom.nextSibling : undefined;
+	            } else {
+	                var dom = this.getDom();
+	                nextDom = dom.nextSibling;
+	            }
+	            if (nextDom) {
+	                nextNode = Node.getNodeFromTarget(nextDom);
+	                nextDom2 = nextDom.nextSibling;
+	                nextNode2 = Node.getNodeFromTarget(nextDom2);
+	                if (nextNode && nextNode instanceof AppendNode &&
+	                    !(this.parent.childs.length == 1) &&
+	                    nextNode2 && nextNode2.parent) {
+	                    nextNode2.parent.moveBefore(this, nextNode2);
+	                    this.focus(Node.focusElement || this._getElementName(target));
+	                }
+	            }
+	        }
+	    } else if (keynum == 38) { // Arrow Up
+	        if (altKey && !shiftKey) { // Alt + Arrow Up
+	            // find the previous node
+	            prevNode = this._previousNode();
+	            if (prevNode) {
+	                prevNode.focus(Node.focusElement || this._getElementName(target));
+	            }
+	            handled = true;
+	        } else if (altKey && shiftKey) { // Alt + Shift + Arrow Up
+	            // find the previous node
+	            prevNode = this._previousNode();
+	            if (prevNode && prevNode.parent) {
+	                prevNode.parent.moveBefore(this, prevNode);
+	                this.focus(Node.focusElement || this._getElementName(target));
+	            }
+	            handled = true;
+	        }
+	    } else if (keynum == 39) { // Arrow Right
+	        if (altKey && !shiftKey) { // Alt + Arrow Right
+	            // move to right element
+	            var nextElement = this._nextElement(target);
+	            if (nextElement) {
+	                this.focus(this._getElementName(nextElement));
+	            }
+	            handled = true;
+	        } else if (altKey && shiftKey) { // Alt + Shift Arrow Right
+	            dom = this.getDom();
+	            var prevDom = dom.previousSibling;
+	            if (prevDom) {
+	                prevNode = Node.getNodeFromTarget(prevDom);
+	                if (prevNode && prevNode.parent &&
+	                    (prevNode instanceof AppendNode) && !prevNode.isVisible()) {
+	                    prevNode.parent.moveBefore(this, prevNode);
+	                    this.focus(Node.focusElement || this._getElementName(target));
+	                }
+	            }
+	        }
+	    } else if (keynum == 40) { // Arrow Down
+	        if (altKey && !shiftKey) { // Alt + Arrow Down
+	            // find the next node
+	            nextNode = this._nextNode();
+	            if (nextNode) {
+	                nextNode.focus(Node.focusElement || this._getElementName(target));
+	            }
+	            handled = true;
+	        } else if (altKey && shiftKey && editable) { // Alt + Shift + Arrow Down
+	            // find the 2nd next node and move before that one
+	            if (this.expanded) {
+	                nextNode = this.append ? this.append._nextNode() : undefined;
+	            } else {
+	                nextNode = this._nextNode();
+	            }
+	            nextDom = nextNode ? nextNode.getDom() : undefined;
+	            if (this.parent.childs.length == 1) {
+	                nextDom2 = nextDom;
+	            } else {
+	                nextDom2 = nextDom ? nextDom.nextSibling : undefined;
+	            }
+	            var nextNode2 = Node.getNodeFromTarget(nextDom2);
+	            if (nextNode2 && nextNode2.parent) {
+	                nextNode2.parent.moveBefore(this, nextNode2);
+	                this.focus(Node.focusElement || this._getElementName(target));
+	            }
+	            handled = true;
+	        }
 	    }
-	  }
-	  else if (keynum == 40) {        // Arrow Down
-	    if (altKey && !shiftKey) {  // Alt + Arrow Down
-	      // find the next node
-	      nextNode = this._nextNode();
-	      if (nextNode) {
-	        nextNode.focus(Node.focusElement || this._getElementName(target));
-	      }
-	      handled = true;
-	    }
-	    else if (altKey && shiftKey && editable) { // Alt + Shift + Arrow Down
-	      // find the 2nd next node and move before that one
-	      if (this.expanded) {
-	        nextNode = this.append ? this.append._nextNode() : undefined;
-	      }
-	      else {
-	        nextNode = this._nextNode();
-	      }
-	      nextDom = nextNode ? nextNode.getDom() : undefined;
-	      if (this.parent.childs.length == 1) {
-	        nextDom2 = nextDom;
-	      }
-	      else {
-	        nextDom2 = nextDom ? nextDom.nextSibling : undefined;
-	      }
-	      var nextNode2 = Node.getNodeFromTarget(nextDom2);
-	      if (nextNode2 && nextNode2.parent) {
-	        nextNode2.parent.moveBefore(this, nextNode2);
-	        this.focus(Node.focusElement || this._getElementName(target));
-	      }
-	      handled = true;
-	    }
-	  }
 
-	  if (handled) {
-	    event.preventDefault();
-	    event.stopPropagation();
-	  }
+	    if (handled) {
+	        event.preventDefault();
+	        event.stopPropagation();
+	    }
 	};
 
 	/**
@@ -4827,81 +4873,146 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onExpand = function (recurse) {
-	  if (recurse) {
-	    // Take the table offline
-	    var table = this.dom.tr.parentNode; // TODO: not nice to access the main table like this
-	    var frame = table.parentNode;
-	    var scrollTop = frame.scrollTop;
-	    frame.removeChild(table);
-	  }
+	    if (recurse) {
+	        // Take the table offline
+	        var table = this.dom.tr.parentNode; // TODO: not nice to access the main table like this
+	        var frame = table.parentNode;
+	        var scrollTop = frame.scrollTop;
+	        frame.removeChild(table);
+	    }
 
-	  if (this.expanded) {
-	    this.collapse(recurse);
-	  }
-	  else {
-	    this.expand(recurse);
-	  }
+	    if (this.expanded) {
+	        this.collapse(recurse);
+	    } else {
+	        this.expand(recurse);
+	    }
 
-	  if (recurse) {
-	    // Put the table online again
-	    frame.appendChild(table);
-	    frame.scrollTop = scrollTop;
-	  }
+	    if (recurse) {
+	        // Put the table online again
+	        frame.appendChild(table);
+	        frame.scrollTop = scrollTop;
+	    }
 	};
 
 	/**
 	 * Remove this node
 	 * @private
 	 */
-	Node.prototype._onRemove = function() {
-	  this.editor.highlighter.unhighlight();
-	  var childs = this.parent.childs;
-	  var index = childs.indexOf(this);
+	Node.prototype._onRemove = function () {
+	    this.editor.highlighter.unhighlight();
+	    var childs = this.parent.childs;
+	    var index = childs.indexOf(this);
 
-	  // adjust the focus
-	  var oldSelection = this.editor.getSelection();
-	  if (childs[index + 1]) {
-	    childs[index + 1].focus();
-	  }
-	  else if (childs[index - 1]) {
-	    childs[index - 1].focus();
-	  }
-	  else {
-	    this.parent.focus();
-	  }
-	  var newSelection = this.editor.getSelection();
+	    // adjust the focus
+	    var oldSelection = this.editor.getSelection();
+	    if (childs[index + 1]) {
+	        childs[index + 1].focus();
+	    } else if (childs[index - 1]) {
+	        childs[index - 1].focus();
+	    } else {
+	        this.parent.focus();
+	    }
+	    var newSelection = this.editor.getSelection();
 
-	  // remove the node
-	  this.parent._remove(this);
+	    // remove the node
+	    this.parent._remove(this);
 
-	  // store history action
-	  this.editor._onAction('removeNode', {
-	    node: this,
-	    parent: this.parent,
-	    index: index,
-	    oldSelection: oldSelection,
-	    newSelection: newSelection
-	  });
+	    // store history action
+	    this.editor._onAction('removeNode', {
+	        node: this,
+	        parent: this.parent,
+	        index: index,
+	        oldSelection: oldSelection,
+	        newSelection: newSelection
+	    });
 	};
 
 	/**
 	 * Duplicate this node
 	 * @private
 	 */
-	Node.prototype._onDuplicate = function() {
-	  var oldSelection = this.editor.getSelection();
-	  var clone = this.parent._duplicate(this);
-	  clone.focus();
-	  var newSelection = this.editor.getSelection();
+	Node.prototype._onDuplicate = function () {
+	    var oldSelection = this.editor.getSelection();
+	    var clone = this.parent._duplicate(this);
+	    clone.focus();
+	    var newSelection = this.editor.getSelection();
 
-	  this.editor._onAction('duplicateNode', {
-	    node: this,
-	    clone: clone,
-	    parent: this.parent,
-	    oldSelection: oldSelection,
-	    newSelection: newSelection
-	  });
+	    this.editor._onAction('duplicateNode', {
+	        node: this,
+	        clone: clone,
+	        parent: this.parent,
+	        oldSelection: oldSelection,
+	        newSelection: newSelection
+	    });
 	};
+
+	Node.prototype._propdown = function () {
+	    // a dfs over all the child nodes
+	    var parent = this;
+	    if (this.childs) {
+	        this.childs.forEach(function (child) {
+	            // children's checkbox will be the same as parent's checkbox status
+	            // since indeterminate has higher precedence than checked,
+	            // disable indeterminate first
+	            child.dom.checkbox.indeterminate = false;
+	            child.dom.checkbox.checked = parent.dom.checkbox.checked;
+	            child._propdown();
+	        });
+	    }
+	};
+
+	Node.prototype._propup = function () {
+	    //console.log(this)
+	    if (!this.parent) return; // root node
+
+	    if (this.dom.checkbox.checked && !this.dom.checkbox.indeterminate) {
+	        // only props up when it is fully checked
+	        // use checkbox state to determine prop up or not
+	        this.parent._checkedChildren += 1;
+	        if (this.parent._checkedChildren >= this.parent.childs.length)
+	            this.parent._checkedChildren = this.parent.childs.length;
+	        this.parent._uncheckedChildren -= 1;
+	        if (this.parent._uncheckedChildren <= 0)
+	            this.parent._uncheckedChildren = 0;
+	    } else if (!this.dom.checkbox.checked && !this.dom.checkbox.indeterminate) {
+	        // when the node is not checked
+	        this.parent._checkedChildren -= 1;
+	        if (this.parent._checkedChildren <= 0)
+	            this.parent._checkedChildren = 0;
+
+	        this.parent._uncheckedChildren += 1;
+	        if (this.parent._uncheckedChildren >= this.parent.childs.length)
+	            this.parent._uncheckedChildren = this.parent.childs.length;
+	    }
+
+	    //console.log(this.parent._checkedChildren, this.parent._uncheckedChildren, this.parent.field);
+	    if (this.parent.childs.length === this.parent._checkedChildren) {
+	        this.parent.dom.checkbox.indeterminate = false;
+	        this.parent.dom.checkbox.checked = true;
+	    } else if (this.parent.childs.length === this.parent._uncheckedChildren) {
+	        this.parent.dom.checkbox.indeterminate = false;
+	        this.parent.dom.checkbox.checked = false;
+	    } else {
+	        this.parent.dom.checkbox.indeterminate = true;
+	    }
+	    // HOTFIX
+	    if (this.dom.checkbox.indeterminate) {
+	        this.parent.dom.checkbox.indeterminate = true;
+	    }
+
+	    this.parent._propup();
+	};
+
+	Node.prototype._onCheck = function () {
+	    // propagate down
+	    this._propdown();
+	    //propagate up
+	    this._propup();
+
+	    // save checked information
+	    this.editor.setChecked(this);
+	};
+
 
 	/**
 	 * Handle insert before event
@@ -4911,26 +5022,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onInsertBefore = function (field, value, type) {
-	  var oldSelection = this.editor.getSelection();
+	    var oldSelection = this.editor.getSelection();
 
-	  var newNode = new Node(this.editor, {
-	    field: (field != undefined) ? field : '',
-	    value: (value != undefined) ? value : '',
-	    type: type
-	  });
-	  newNode.expand(true);
-	  this.parent.insertBefore(newNode, this);
-	  this.editor.highlighter.unhighlight();
-	  newNode.focus('field');
-	  var newSelection = this.editor.getSelection();
+	    var newNode = new Node(this.editor, {
+	        field: (field != undefined) ? field : '',
+	        value: (value != undefined) ? value : '',
+	        type: type
+	    });
+	    newNode.expand(true);
+	    this.parent.insertBefore(newNode, this);
+	    this.editor.highlighter.unhighlight();
+	    newNode.focus('field');
+	    var newSelection = this.editor.getSelection();
 
-	  this.editor._onAction('insertBeforeNode', {
-	    node: newNode,
-	    beforeNode: this,
-	    parent: this.parent,
-	    oldSelection: oldSelection,
-	    newSelection: newSelection
-	  });
+	    this.editor._onAction('insertBeforeNode', {
+	        node: newNode,
+	        beforeNode: this,
+	        parent: this.parent,
+	        oldSelection: oldSelection,
+	        newSelection: newSelection
+	    });
 	};
 
 	/**
@@ -4941,26 +5052,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onInsertAfter = function (field, value, type) {
-	  var oldSelection = this.editor.getSelection();
+	    var oldSelection = this.editor.getSelection();
 
-	  var newNode = new Node(this.editor, {
-	    field: (field != undefined) ? field : '',
-	    value: (value != undefined) ? value : '',
-	    type: type
-	  });
-	  newNode.expand(true);
-	  this.parent.insertAfter(newNode, this);
-	  this.editor.highlighter.unhighlight();
-	  newNode.focus('field');
-	  var newSelection = this.editor.getSelection();
+	    var newNode = new Node(this.editor, {
+	        field: (field != undefined) ? field : '',
+	        value: (value != undefined) ? value : '',
+	        type: type
+	    });
+	    newNode.expand(true);
+	    this.parent.insertAfter(newNode, this);
+	    this.editor.highlighter.unhighlight();
+	    newNode.focus('field');
+	    var newSelection = this.editor.getSelection();
 
-	  this.editor._onAction('insertAfterNode', {
-	    node: newNode,
-	    afterNode: this,
-	    parent: this.parent,
-	    oldSelection: oldSelection,
-	    newSelection: newSelection
-	  });
+	    this.editor._onAction('insertAfterNode', {
+	        node: newNode,
+	        afterNode: this,
+	        parent: this.parent,
+	        oldSelection: oldSelection,
+	        newSelection: newSelection
+	    });
 	};
 
 	/**
@@ -4971,25 +5082,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onAppend = function (field, value, type) {
-	  var oldSelection = this.editor.getSelection();
+	    var oldSelection = this.editor.getSelection();
 
-	  var newNode = new Node(this.editor, {
-	    field: (field != undefined) ? field : '',
-	    value: (value != undefined) ? value : '',
-	    type: type
-	  });
-	  newNode.expand(true);
-	  this.parent.appendChild(newNode);
-	  this.editor.highlighter.unhighlight();
-	  newNode.focus('field');
-	  var newSelection = this.editor.getSelection();
+	    var newNode = new Node(this.editor, {
+	        field: (field != undefined) ? field : '',
+	        value: (value != undefined) ? value : '',
+	        type: type
+	    });
+	    newNode.expand(true);
+	    this.parent.appendChild(newNode);
+	    this.editor.highlighter.unhighlight();
+	    newNode.focus('field');
+	    var newSelection = this.editor.getSelection();
 
-	  this.editor._onAction('appendNode', {
-	    node: newNode,
-	    parent: this.parent,
-	    oldSelection: oldSelection,
-	    newSelection: newSelection
-	  });
+	    this.editor._onAction('appendNode', {
+	        node: newNode,
+	        parent: this.parent,
+	        oldSelection: oldSelection,
+	        newSelection: newSelection
+	    });
 	};
 
 	/**
@@ -4998,20 +5109,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onChangeType = function (newType) {
-	  var oldType = this.type;
-	  if (newType != oldType) {
-	    var oldSelection = this.editor.getSelection();
-	    this.changeType(newType);
-	    var newSelection = this.editor.getSelection();
+	    var oldType = this.type;
+	    if (newType != oldType) {
+	        var oldSelection = this.editor.getSelection();
+	        this.changeType(newType);
+	        var newSelection = this.editor.getSelection();
 
-	    this.editor._onAction('changeType', {
-	      node: this,
-	      oldType: oldType,
-	      newType: newType,
-	      oldSelection: oldSelection,
-	      newSelection: newSelection
-	    });
-	  }
+	        this.editor._onAction('changeType', {
+	            node: this,
+	            oldType: oldType,
+	            newType: newType,
+	            oldSelection: oldSelection,
+	            newSelection: newSelection
+	        });
+	    }
 	};
 
 	/**
@@ -5021,35 +5132,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._onSort = function (direction) {
-	  if (this._hasChilds()) {
-	    var order = (direction == 'desc') ? -1 : 1;
-	    var prop = (this.type == 'array') ? 'value': 'field';
-	    this.hideChilds();
+	    if (this._hasChilds()) {
+	        var order = (direction == 'desc') ? -1 : 1;
+	        var prop = (this.type == 'array') ? 'value' : 'field';
+	        this.hideChilds();
 
-	    var oldChilds = this.childs;
-	    var oldSort = this.sort;
+	        var oldChilds = this.childs;
+	        var oldSort = this.sort;
 
-	    // copy the array (the old one will be kept for an undo action
-	    this.childs = this.childs.concat();
+	        // copy the array (the old one will be kept for an undo action
+	        this.childs = this.childs.concat();
 
-	    // sort the arrays
-	    this.childs.sort(function (a, b) {
-	      if (a[prop] > b[prop]) return order;
-	      if (a[prop] < b[prop]) return -order;
-	      return 0;
-	    });
-	    this.sort = (order == 1) ? 'asc' : 'desc';
+	        // sort the arrays
+	        this.childs.sort(function (a, b) {
+	            if (a[prop] > b[prop]) return order;
+	            if (a[prop] < b[prop]) return -order;
+	            return 0;
+	        });
+	        this.sort = (order == 1) ? 'asc' : 'desc';
 
-	    this.editor._onAction('sort', {
-	      node: this,
-	      oldChilds: oldChilds,
-	      oldSort: oldSort,
-	      newChilds: this.childs,
-	      newSort: this.sort
-	    });
+	        this.editor._onAction('sort', {
+	            node: this,
+	            oldChilds: oldChilds,
+	            oldSort: oldSort,
+	            newChilds: this.childs,
+	            newSort: this.sort
+	        });
 
-	    this.showChilds();
-	  }
+	        this.showChilds();
+	    }
 	};
 
 	/**
@@ -5057,11 +5168,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {HTMLElement | undefined} buttonAppend or undefined when inapplicable
 	 */
 	Node.prototype.getAppend = function () {
-	  if (!this.append) {
-	    this.append = new AppendNode(this.editor);
-	    this.append.setParent(this);
-	  }
-	  return this.append.getDom();
+	    if (!this.append) {
+	        this.append = new AppendNode(this.editor);
+	        this.append.setParent(this);
+	    }
+	    return this.append.getDom();
 	};
 
 	/**
@@ -5071,14 +5182,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @static
 	 */
 	Node.getNodeFromTarget = function (target) {
-	  while (target) {
-	    if (target.node) {
-	      return target.node;
+	    while (target) {
+	        if (target.node) {
+	            return target.node;
+	        }
+	        target = target.parentNode;
 	    }
-	    target = target.parentNode;
-	  }
 
-	  return undefined;
+	    return undefined;
 	};
 
 	/**
@@ -5087,18 +5198,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._previousNode = function () {
-	  var prevNode = null;
-	  var dom = this.getDom();
-	  if (dom && dom.parentNode) {
-	    // find the previous field
-	    var prevDom = dom;
-	    do {
-	      prevDom = prevDom.previousSibling;
-	      prevNode = Node.getNodeFromTarget(prevDom);
+	    var prevNode = null;
+	    var dom = this.getDom();
+	    if (dom && dom.parentNode) {
+	        // find the previous field
+	        var prevDom = dom;
+	        do {
+	            prevDom = prevDom.previousSibling;
+	            prevNode = Node.getNodeFromTarget(prevDom);
+	        }
+	        while (prevDom && (prevNode instanceof AppendNode && !prevNode.isVisible()));
 	    }
-	    while (prevDom && (prevNode instanceof AppendNode && !prevNode.isVisible()));
-	  }
-	  return prevNode;
+	    return prevNode;
 	};
 
 	/**
@@ -5107,19 +5218,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._nextNode = function () {
-	  var nextNode = null;
-	  var dom = this.getDom();
-	  if (dom && dom.parentNode) {
-	    // find the previous field
-	    var nextDom = dom;
-	    do {
-	      nextDom = nextDom.nextSibling;
-	      nextNode = Node.getNodeFromTarget(nextDom);
+	    var nextNode = null;
+	    var dom = this.getDom();
+	    if (dom && dom.parentNode) {
+	        // find the previous field
+	        var nextDom = dom;
+	        do {
+	            nextDom = nextDom.nextSibling;
+	            nextNode = Node.getNodeFromTarget(nextDom);
+	        }
+	        while (nextDom && (nextNode instanceof AppendNode && !nextNode.isVisible()));
 	    }
-	    while (nextDom && (nextNode instanceof AppendNode && !nextNode.isVisible()));
-	  }
 
-	  return nextNode;
+	    return nextNode;
 	};
 
 	/**
@@ -5128,14 +5239,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._firstNode = function () {
-	  var firstNode = null;
-	  var dom = this.getDom();
-	  if (dom && dom.parentNode) {
-	    var firstDom = dom.parentNode.firstChild;
-	    firstNode = Node.getNodeFromTarget(firstDom);
-	  }
+	    var firstNode = null;
+	    var dom = this.getDom();
+	    if (dom && dom.parentNode) {
+	        var firstDom = dom.parentNode.firstChild;
+	        firstNode = Node.getNodeFromTarget(firstDom);
+	    }
 
-	  return firstNode;
+	    return firstNode;
 	};
 
 	/**
@@ -5144,17 +5255,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._lastNode = function () {
-	  var lastNode = null;
-	  var dom = this.getDom();
-	  if (dom && dom.parentNode) {
-	    var lastDom = dom.parentNode.lastChild;
-	    lastNode =  Node.getNodeFromTarget(lastDom);
-	    while (lastDom && (lastNode instanceof AppendNode && !lastNode.isVisible())) {
-	      lastDom = lastDom.previousSibling;
-	      lastNode =  Node.getNodeFromTarget(lastDom);
+	    var lastNode = null;
+	    var dom = this.getDom();
+	    if (dom && dom.parentNode) {
+	        var lastDom = dom.parentNode.lastChild;
+	        lastNode = Node.getNodeFromTarget(lastDom);
+	        while (lastDom && (lastNode instanceof AppendNode && !lastNode.isVisible())) {
+	            lastDom = lastDom.previousSibling;
+	            lastNode = Node.getNodeFromTarget(lastDom);
+	        }
 	    }
-	  }
-	  return lastNode;
+	    return lastNode;
 	};
 
 	/**
@@ -5164,29 +5275,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._previousElement = function (elem) {
-	  var dom = this.dom;
-	  // noinspection FallthroughInSwitchStatementJS
-	  switch (elem) {
+	    var dom = this.dom;
+	    // noinspection FallthroughInSwitchStatementJS
+	    switch (elem) {
 	    case dom.value:
-	      if (this.fieldEditable) {
-	        return dom.field;
-	      }
-	    // intentional fall through
+	        if (this.fieldEditable) {
+	            return dom.field;
+	        }
+	        // intentional fall through
 	    case dom.field:
-	      if (this._hasChilds()) {
-	        return dom.expand;
-	      }
-	    // intentional fall through
+	        if (this._hasChilds()) {
+	            return dom.expand;
+	        }
+	        // intentional fall through
 	    case dom.expand:
-	      return dom.menu;
+	        return dom.menu;
 	    case dom.menu:
-	      if (dom.drag) {
-	        return dom.drag;
-	      }
-	    // intentional fall through
+	        if (dom.drag) {
+	            return dom.drag;
+	        }
+	        // intentional fall through
 	    default:
-	      return null;
-	  }
+	        return null;
+	    }
 	};
 
 	/**
@@ -5196,28 +5307,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._nextElement = function (elem) {
-	  var dom = this.dom;
-	  // noinspection FallthroughInSwitchStatementJS
-	  switch (elem) {
+	    var dom = this.dom;
+	    // noinspection FallthroughInSwitchStatementJS
+	    switch (elem) {
 	    case dom.drag:
-	      return dom.menu;
+	        return dom.menu;
 	    case dom.menu:
-	      if (this._hasChilds()) {
-	        return dom.expand;
-	      }
-	    // intentional fall through
+	        if (this._hasChilds()) {
+	            return dom.expand;
+	        }
+	        // intentional fall through
 	    case dom.expand:
-	      if (this.fieldEditable) {
-	        return dom.field;
-	      }
-	    // intentional fall through
+	        if (this.fieldEditable) {
+	            return dom.field;
+	        }
+	        // intentional fall through
 	    case dom.field:
-	      if (!this._hasChilds()) {
-	        return dom.value;
-	      }
+	        if (!this._hasChilds()) {
+	            return dom.value;
+	        }
 	    default:
-	      return null;
-	  }
+	        return null;
+	    }
 	};
 
 	/**
@@ -5229,15 +5340,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._getElementName = function (element) {
-	  var dom = this.dom;
-	  for (var name in dom) {
-	    if (dom.hasOwnProperty(name)) {
-	      if (dom[name] == element) {
-	        return name;
-	      }
+	    var dom = this.dom;
+	    for (var name in dom) {
+	        if (dom.hasOwnProperty(name)) {
+	            if (dom[name] == element) {
+	                return name;
+	            }
+	        }
 	    }
-	  }
-	  return null;
+	    return null;
 	};
 
 	/**
@@ -5247,21 +5358,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._hasChilds = function () {
-	  return this.type == 'array' || this.type == 'object';
+	    return this.type == 'array' || this.type == 'object';
 	};
 
 	// titles with explanation for the different types
 	Node.TYPE_TITLES = {
-	  'auto': 'Field type "auto". ' +
-	      'The field type is automatically determined from the value ' +
-	      'and can be a string, number, boolean, or null.',
-	  'object': 'Field type "object". ' +
-	      'An object contains an unordered set of key/value pairs.',
-	  'array': 'Field type "array". ' +
-	      'An array contains an ordered collection of values.',
-	  'string': 'Field type "string". ' +
-	      'Field type is not determined from the value, ' +
-	      'but always returned as string.'
+	    'auto': 'Field type "auto". ' +
+	        'The field type is automatically determined from the value ' +
+	        'and can be a string, number, boolean, or null.',
+	    'object': 'Field type "object". ' +
+	        'An object contains an unordered set of key/value pairs.',
+	    'array': 'Field type "array". ' +
+	        'An array contains an ordered collection of values.',
+	    'string': 'Field type "string". ' +
+	        'Field type is not determined from the value, ' +
+	        'but always returned as string.'
 	};
 
 	/**
@@ -5271,212 +5382,196 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *                               is being closed.
 	 */
 	Node.prototype.showContextMenu = function (anchor, onClose) {
-	  var node = this;
-	  var titles = Node.TYPE_TITLES;
-	  var items = [];
+	    var node = this;
+	    var titles = Node.TYPE_TITLES;
+	    var items = [];
 
-	  if (this.editable.value) {
-	    items.push({
-	      text: 'Type',
-	      title: 'Change the type of this field',
-	      className: 'type-' + this.type,
-	      submenu: [
-	        {
-	          text: 'Auto',
-	          className: 'type-auto' +
-	              (this.type == 'auto' ? ' selected' : ''),
-	          title: titles.auto,
-	          click: function () {
-	            node._onChangeType('auto');
-	          }
-	        },
-	        {
-	          text: 'Array',
-	          className: 'type-array' +
-	              (this.type == 'array' ? ' selected' : ''),
-	          title: titles.array,
-	          click: function () {
-	            node._onChangeType('array');
-	          }
-	        },
-	        {
-	          text: 'Object',
-	          className: 'type-object' +
-	              (this.type == 'object' ? ' selected' : ''),
-	          title: titles.object,
-	          click: function () {
-	            node._onChangeType('object');
-	          }
-	        },
-	        {
-	          text: 'String',
-	          className: 'type-string' +
-	              (this.type == 'string' ? ' selected' : ''),
-	          title: titles.string,
-	          click: function () {
-	            node._onChangeType('string');
-	          }
-	        }
-	      ]
-	    });
-	  }
-
-	  if (this._hasChilds()) {
-	    var direction = ((this.sort == 'asc') ? 'desc': 'asc');
-	    items.push({
-	      text: 'Sort',
-	      title: 'Sort the childs of this ' + this.type,
-	      className: 'sort-' + direction,
-	      click: function () {
-	        node._onSort(direction);
-	      },
-	      submenu: [
-	        {
-	          text: 'Ascending',
-	          className: 'sort-asc',
-	          title: 'Sort the childs of this ' + this.type + ' in ascending order',
-	          click: function () {
-	            node._onSort('asc');
-	          }
-	        },
-	        {
-	          text: 'Descending',
-	          className: 'sort-desc',
-	          title: 'Sort the childs of this ' + this.type +' in descending order',
-	          click: function () {
-	            node._onSort('desc');
-	          }
-	        }
-	      ]
-	    });
-	  }
-
-	  if (this.parent && this.parent._hasChilds()) {
-	    if (items.length) {
-	      // create a separator
-	      items.push({
-	        'type': 'separator'
-	      });
+	    if (this.editable.value) {
+	        items.push({
+	            text: 'Type',
+	            title: 'Change the type of this field',
+	            className: 'type-' + this.type,
+	            submenu: [{
+	                text: 'Auto',
+	                className: 'type-auto' +
+	                    (this.type == 'auto' ? ' selected' : ''),
+	                title: titles.auto,
+	                click: function () {
+	                    node._onChangeType('auto');
+	                }
+	            }, {
+	                text: 'Array',
+	                className: 'type-array' +
+	                    (this.type == 'array' ? ' selected' : ''),
+	                title: titles.array,
+	                click: function () {
+	                    node._onChangeType('array');
+	                }
+	            }, {
+	                text: 'Object',
+	                className: 'type-object' +
+	                    (this.type == 'object' ? ' selected' : ''),
+	                title: titles.object,
+	                click: function () {
+	                    node._onChangeType('object');
+	                }
+	            }, {
+	                text: 'String',
+	                className: 'type-string' +
+	                    (this.type == 'string' ? ' selected' : ''),
+	                title: titles.string,
+	                click: function () {
+	                    node._onChangeType('string');
+	                }
+	            }]
+	        });
 	    }
 
-	    // create append button (for last child node only)
-	    var childs = node.parent.childs;
-	    if (node == childs[childs.length - 1]) {
-	      items.push({
-	        text: 'Append',
-	        title: 'Append a new field with type \'auto\' after this field (Ctrl+Shift+Ins)',
-	        submenuTitle: 'Select the type of the field to be appended',
-	        className: 'append',
-	        click: function () {
-	          node._onAppend('', '', 'auto');
-	        },
-	        submenu: [
-	          {
-	            text: 'Auto',
-	            className: 'type-auto',
-	            title: titles.auto,
+	    if (this._hasChilds()) {
+	        var direction = ((this.sort == 'asc') ? 'desc' : 'asc');
+	        items.push({
+	            text: 'Sort',
+	            title: 'Sort the childs of this ' + this.type,
+	            className: 'sort-' + direction,
 	            click: function () {
-	              node._onAppend('', '', 'auto');
-	            }
-	          },
-	          {
-	            text: 'Array',
-	            className: 'type-array',
-	            title: titles.array,
-	            click: function () {
-	              node._onAppend('', []);
-	            }
-	          },
-	          {
-	            text: 'Object',
-	            className: 'type-object',
-	            title: titles.object,
-	            click: function () {
-	              node._onAppend('', {});
-	            }
-	          },
-	          {
-	            text: 'String',
-	            className: 'type-string',
-	            title: titles.string,
-	            click: function () {
-	              node._onAppend('', '', 'string');
-	            }
-	          }
-	        ]
-	      });
+	                node._onSort(direction);
+	            },
+	            submenu: [{
+	                text: 'Ascending',
+	                className: 'sort-asc',
+	                title: 'Sort the childs of this ' + this.type + ' in ascending order',
+	                click: function () {
+	                    node._onSort('asc');
+	                }
+	            }, {
+	                text: 'Descending',
+	                className: 'sort-desc',
+	                title: 'Sort the childs of this ' + this.type + ' in descending order',
+	                click: function () {
+	                    node._onSort('desc');
+	                }
+	            }]
+	        });
 	    }
 
-	    // create insert button
-	    items.push({
-	      text: 'Insert',
-	      title: 'Insert a new field with type \'auto\' before this field (Ctrl+Ins)',
-	      submenuTitle: 'Select the type of the field to be inserted',
-	      className: 'insert',
-	      click: function () {
-	        node._onInsertBefore('', '', 'auto');
-	      },
-	      submenu: [
-	        {
-	          text: 'Auto',
-	          className: 'type-auto',
-	          title: titles.auto,
-	          click: function () {
-	            node._onInsertBefore('', '', 'auto');
-	          }
-	        },
-	        {
-	          text: 'Array',
-	          className: 'type-array',
-	          title: titles.array,
-	          click: function () {
-	            node._onInsertBefore('', []);
-	          }
-	        },
-	        {
-	          text: 'Object',
-	          className: 'type-object',
-	          title: titles.object,
-	          click: function () {
-	            node._onInsertBefore('', {});
-	          }
-	        },
-	        {
-	          text: 'String',
-	          className: 'type-string',
-	          title: titles.string,
-	          click: function () {
-	            node._onInsertBefore('', '', 'string');
-	          }
+	    if (this.parent && this.parent._hasChilds()) {
+	        if (items.length) {
+	            // create a separator
+	            items.push({
+	                'type': 'separator'
+	            });
 	        }
-	      ]
+
+	        // create append button (for last child node only)
+	        var childs = node.parent.childs;
+	        if (node == childs[childs.length - 1]) {
+	            items.push({
+	                text: 'Append',
+	                title: 'Append a new field with type \'auto\' after this field (Ctrl+Shift+Ins)',
+	                submenuTitle: 'Select the type of the field to be appended',
+	                className: 'append',
+	                click: function () {
+	                    node._onAppend('', '', 'auto');
+	                },
+	                submenu: [{
+	                    text: 'Auto',
+	                    className: 'type-auto',
+	                    title: titles.auto,
+	                    click: function () {
+	                        node._onAppend('', '', 'auto');
+	                    }
+	                }, {
+	                    text: 'Array',
+	                    className: 'type-array',
+	                    title: titles.array,
+	                    click: function () {
+	                        node._onAppend('', []);
+	                    }
+	                }, {
+	                    text: 'Object',
+	                    className: 'type-object',
+	                    title: titles.object,
+	                    click: function () {
+	                        node._onAppend('', {});
+	                    }
+	                }, {
+	                    text: 'String',
+	                    className: 'type-string',
+	                    title: titles.string,
+	                    click: function () {
+	                        node._onAppend('', '', 'string');
+	                    }
+	                }]
+	            });
+	        }
+
+	        // create insert button
+	        items.push({
+	            text: 'Insert',
+	            title: 'Insert a new field with type \'auto\' before this field (Ctrl+Ins)',
+	            submenuTitle: 'Select the type of the field to be inserted',
+	            className: 'insert',
+	            click: function () {
+	                node._onInsertBefore('', '', 'auto');
+	            },
+	            submenu: [{
+	                text: 'Auto',
+	                className: 'type-auto',
+	                title: titles.auto,
+	                click: function () {
+	                    node._onInsertBefore('', '', 'auto');
+	                }
+	            }, {
+	                text: 'Array',
+	                className: 'type-array',
+	                title: titles.array,
+	                click: function () {
+	                    node._onInsertBefore('', []);
+	                }
+	            }, {
+	                text: 'Object',
+	                className: 'type-object',
+	                title: titles.object,
+	                click: function () {
+	                    node._onInsertBefore('', {});
+	                }
+	            }, {
+	                text: 'String',
+	                className: 'type-string',
+	                title: titles.string,
+	                click: function () {
+	                    node._onInsertBefore('', '', 'string');
+	                }
+	            }]
+	        });
+
+	        if (this.editable.field) {
+	            // create duplicate button
+	            items.push({
+	                text: 'Duplicate',
+	                title: 'Duplicate this field (Ctrl+D)',
+	                className: 'duplicate',
+	                click: function () {
+	                    node._onDuplicate();
+	                }
+	            });
+
+	            // create remove button
+	            items.push({
+	                text: 'Remove',
+	                title: 'Remove this field (Ctrl+Del)',
+	                className: 'remove',
+	                click: function () {
+	                    node._onRemove();
+	                }
+	            });
+	        }
+	    }
+
+	    var menu = new ContextMenu(items, {
+	        close: onClose
 	    });
-
-	    if (this.editable.field) {
-	      // create duplicate button
-	      items.push({
-	        text: 'Duplicate',
-	        title: 'Duplicate this field (Ctrl+D)',
-	        className: 'duplicate',
-	        click: function () {
-	          node._onDuplicate();
-	        }
-	      });
-
-	      // create remove button
-	      items.push({
-	        text: 'Remove',
-	        title: 'Remove this field (Ctrl+Del)',
-	        className: 'remove',
-	        click: function () {
-	          node._onRemove();
-	        }
-	      });
-	    }
-	  }
-
-	  var menu = new ContextMenu(items, {close: onClose});
-	  menu.show(anchor);
+	    menu.show(anchor);
 	};
 
 	/**
@@ -5485,18 +5580,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {String} type   Can be 'object', 'array', 'string', 'auto'
 	 * @private
 	 */
-	Node.prototype._getType = function(value) {
-	  if (value instanceof Array) {
-	    return 'array';
-	  }
-	  if (value instanceof Object) {
-	    return 'object';
-	  }
-	  if (typeof(value) == 'string' && typeof(this._stringCast(value)) != 'string') {
-	    return 'string';
-	  }
+	Node.prototype._getType = function (value) {
+	    if (value instanceof Array) {
+	        return 'array';
+	    }
+	    if (value instanceof Object) {
+	        return 'object';
+	    }
+	    if (typeof (value) == 'string' && typeof (this._stringCast(value)) != 'string') {
+	        return 'string';
+	    }
 
-	  return 'auto';
+	    return 'auto';
 	};
 
 	/**
@@ -5506,29 +5601,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {*} castedStr
 	 * @private
 	 */
-	Node.prototype._stringCast = function(str) {
-	  var lower = str.toLowerCase(),
-	      num = Number(str),          // will nicely fail with '123ab'
-	      numFloat = parseFloat(str); // will nicely fail with '  '
+	Node.prototype._stringCast = function (str) {
+	    var lower = str.toLowerCase(),
+	        num = Number(str), // will nicely fail with '123ab'
+	        numFloat = parseFloat(str); // will nicely fail with '  '
 
-	  if (str == '') {
-	    return '';
-	  }
-	  else if (lower == 'null') {
-	    return null;
-	  }
-	  else if (lower == 'true') {
-	    return true;
-	  }
-	  else if (lower == 'false') {
-	    return false;
-	  }
-	  else if (!isNaN(num) && !isNaN(numFloat)) {
-	    return num;
-	  }
-	  else {
-	    return str;
-	  }
+	    if (str == '') {
+	        return '';
+	    } else if (lower == 'null') {
+	        return null;
+	    } else if (lower == 'true') {
+	        return true;
+	    } else if (lower == 'false') {
+	        return false;
+	    } else if (!isNaN(num) && !isNaN(numFloat)) {
+	        return num;
+	    } else {
+	        return str;
+	    }
 	};
 
 	/**
@@ -5538,15 +5628,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._escapeHTML = function (text) {
-	  var htmlEscaped = String(text)
-	      .replace(/</g, '&lt;')
-	      .replace(/>/g, '&gt;')
-	      .replace(/  /g, ' &nbsp;') // replace double space with an nbsp and space
-	      .replace(/^ /, '&nbsp;')   // space at start
-	      .replace(/ $/, '&nbsp;');  // space at end
+	    var htmlEscaped = String(text)
+	        .replace(/</g, '&lt;')
+	        .replace(/>/g, '&gt;')
+	        .replace(/  /g, ' &nbsp;') // replace double space with an nbsp and space
+	        .replace(/^ /, '&nbsp;') // space at start
+	        .replace(/ $/, '&nbsp;'); // space at end
 
-	  var json = JSON.stringify(htmlEscaped);
-	  return json.substring(1, json.length - 1);
+	    var json = JSON.stringify(htmlEscaped);
+	    return json.substring(1, json.length - 1);
 	};
 
 	/**
@@ -5556,12 +5646,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._unescapeHTML = function (escapedText) {
-	  var json = '"' + this._escapeJSON(escapedText) + '"';
-	  var htmlEscaped = util.parse(json);
-	  return htmlEscaped
-	      .replace(/&lt;/g, '<')
-	      .replace(/&gt;/g, '>')
-	      .replace(/&nbsp;|\u00A0/g, ' ');
+	    var json = '"' + this._escapeJSON(escapedText) + '"';
+	    var htmlEscaped = util.parse(json);
+	    return htmlEscaped
+	        .replace(/&lt;/g, '<')
+	        .replace(/&gt;/g, '>')
+	        .replace(/&nbsp;|\u00A0/g, ' ');
 	};
 
 	/**
@@ -5574,34 +5664,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @private
 	 */
 	Node.prototype._escapeJSON = function (text) {
-	  // TODO: replace with some smart regex (only when a new solution is faster!)
-	  var escaped = '';
-	  var i = 0, iMax = text.length;
-	  while (i < iMax) {
-	    var c = text.charAt(i);
-	    if (c == '\n') {
-	      escaped += '\\n';
-	    }
-	    else if (c == '\\') {
-	      escaped += c;
-	      i++;
+	    // TODO: replace with some smart regex (only when a new solution is faster!)
+	    var escaped = '';
+	    var i = 0,
+	        iMax = text.length;
+	    while (i < iMax) {
+	        var c = text.charAt(i);
+	        if (c == '\n') {
+	            escaped += '\\n';
+	        } else if (c == '\\') {
+	            escaped += c;
+	            i++;
 
-	      c = text.charAt(i);
-	      if ('"\\/bfnrtu'.indexOf(c) == -1) {
-	        escaped += '\\';  // no valid escape character
-	      }
-	      escaped += c;
+	            c = text.charAt(i);
+	            if ('"\\/bfnrtu'.indexOf(c) == -1) {
+	                escaped += '\\'; // no valid escape character
+	            }
+	            escaped += c;
+	        } else if (c == '"') {
+	            escaped += '\\"';
+	        } else {
+	            escaped += c;
+	        }
+	        i++;
 	    }
-	    else if (c == '"') {
-	      escaped += '\\"';
-	    }
-	    else {
-	      escaped += c;
-	    }
-	    i++;
-	  }
 
-	  return escaped;
+	    return escaped;
 	};
 
 	// TODO: find a nicer solution to resolve this circular dependency between Node and AppendNode
@@ -5721,12 +5809,12 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
 	// load brace
-	var ace = __webpack_require__(14);
+	var ace = __webpack_require__(12);
 
 	// load required ace modules
-	__webpack_require__(15);
-	__webpack_require__(16);
 	__webpack_require__(13);
+	__webpack_require__(14);
+	__webpack_require__(15);
 
 	module.exports = ace;
 
@@ -6229,6 +6317,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // TODO: consistent naming
 
 	    if (this.editable.field) {
+	        //console.log(this.editable);
 	      // a cell for the dragarea column
 	      dom.tdDrag = document.createElement('td');
 
@@ -6414,579 +6503,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 12 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* Jison generated parser */
-	var jsonlint = (function(){
-	var parser = {trace: function trace() { },
-	yy: {},
-	symbols_: {"error":2,"JSONString":3,"STRING":4,"JSONNumber":5,"NUMBER":6,"JSONNullLiteral":7,"NULL":8,"JSONBooleanLiteral":9,"TRUE":10,"FALSE":11,"JSONText":12,"JSONValue":13,"EOF":14,"JSONObject":15,"JSONArray":16,"{":17,"}":18,"JSONMemberList":19,"JSONMember":20,":":21,",":22,"[":23,"]":24,"JSONElementList":25,"$accept":0,"$end":1},
-	terminals_: {2:"error",4:"STRING",6:"NUMBER",8:"NULL",10:"TRUE",11:"FALSE",14:"EOF",17:"{",18:"}",21:":",22:",",23:"[",24:"]"},
-	productions_: [0,[3,1],[5,1],[7,1],[9,1],[9,1],[12,2],[13,1],[13,1],[13,1],[13,1],[13,1],[13,1],[15,2],[15,3],[20,3],[19,1],[19,3],[16,2],[16,3],[25,1],[25,3]],
-	performAction: function anonymous(yytext,yyleng,yylineno,yy,yystate,$$,_$) {
-
-	var $0 = $$.length - 1;
-	switch (yystate) {
-	case 1: // replace escaped characters with actual character
-	          this.$ = yytext.replace(/\\(\\|")/g, "$"+"1")
-	                     .replace(/\\n/g,'\n')
-	                     .replace(/\\r/g,'\r')
-	                     .replace(/\\t/g,'\t')
-	                     .replace(/\\v/g,'\v')
-	                     .replace(/\\f/g,'\f')
-	                     .replace(/\\b/g,'\b');
-	        
-	break;
-	case 2:this.$ = Number(yytext);
-	break;
-	case 3:this.$ = null;
-	break;
-	case 4:this.$ = true;
-	break;
-	case 5:this.$ = false;
-	break;
-	case 6:return this.$ = $$[$0-1];
-	break;
-	case 13:this.$ = {};
-	break;
-	case 14:this.$ = $$[$0-1];
-	break;
-	case 15:this.$ = [$$[$0-2], $$[$0]];
-	break;
-	case 16:this.$ = {}; this.$[$$[$0][0]] = $$[$0][1];
-	break;
-	case 17:this.$ = $$[$0-2]; $$[$0-2][$$[$0][0]] = $$[$0][1];
-	break;
-	case 18:this.$ = [];
-	break;
-	case 19:this.$ = $$[$0-1];
-	break;
-	case 20:this.$ = [$$[$0]];
-	break;
-	case 21:this.$ = $$[$0-2]; $$[$0-2].push($$[$0]);
-	break;
-	}
-	},
-	table: [{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],12:1,13:2,15:7,16:8,17:[1,14],23:[1,15]},{1:[3]},{14:[1,16]},{14:[2,7],18:[2,7],22:[2,7],24:[2,7]},{14:[2,8],18:[2,8],22:[2,8],24:[2,8]},{14:[2,9],18:[2,9],22:[2,9],24:[2,9]},{14:[2,10],18:[2,10],22:[2,10],24:[2,10]},{14:[2,11],18:[2,11],22:[2,11],24:[2,11]},{14:[2,12],18:[2,12],22:[2,12],24:[2,12]},{14:[2,3],18:[2,3],22:[2,3],24:[2,3]},{14:[2,4],18:[2,4],22:[2,4],24:[2,4]},{14:[2,5],18:[2,5],22:[2,5],24:[2,5]},{14:[2,1],18:[2,1],21:[2,1],22:[2,1],24:[2,1]},{14:[2,2],18:[2,2],22:[2,2],24:[2,2]},{3:20,4:[1,12],18:[1,17],19:18,20:19},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:23,15:7,16:8,17:[1,14],23:[1,15],24:[1,21],25:22},{1:[2,6]},{14:[2,13],18:[2,13],22:[2,13],24:[2,13]},{18:[1,24],22:[1,25]},{18:[2,16],22:[2,16]},{21:[1,26]},{14:[2,18],18:[2,18],22:[2,18],24:[2,18]},{22:[1,28],24:[1,27]},{22:[2,20],24:[2,20]},{14:[2,14],18:[2,14],22:[2,14],24:[2,14]},{3:20,4:[1,12],20:29},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:30,15:7,16:8,17:[1,14],23:[1,15]},{14:[2,19],18:[2,19],22:[2,19],24:[2,19]},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:31,15:7,16:8,17:[1,14],23:[1,15]},{18:[2,17],22:[2,17]},{18:[2,15],22:[2,15]},{22:[2,21],24:[2,21]}],
-	defaultActions: {16:[2,6]},
-	parseError: function parseError(str, hash) {
-	    throw new Error(str);
-	},
-	parse: function parse(input) {
-	    var self = this,
-	        stack = [0],
-	        vstack = [null], // semantic value stack
-	        lstack = [], // location stack
-	        table = this.table,
-	        yytext = '',
-	        yylineno = 0,
-	        yyleng = 0,
-	        recovering = 0,
-	        TERROR = 2,
-	        EOF = 1;
-
-	    //this.reductionCount = this.shiftCount = 0;
-
-	    this.lexer.setInput(input);
-	    this.lexer.yy = this.yy;
-	    this.yy.lexer = this.lexer;
-	    if (typeof this.lexer.yylloc == 'undefined')
-	        this.lexer.yylloc = {};
-	    var yyloc = this.lexer.yylloc;
-	    lstack.push(yyloc);
-
-	    if (typeof this.yy.parseError === 'function')
-	        this.parseError = this.yy.parseError;
-
-	    function popStack (n) {
-	        stack.length = stack.length - 2*n;
-	        vstack.length = vstack.length - n;
-	        lstack.length = lstack.length - n;
-	    }
-
-	    function lex() {
-	        var token;
-	        token = self.lexer.lex() || 1; // $end = 1
-	        // if token isn't its numeric value, convert
-	        if (typeof token !== 'number') {
-	            token = self.symbols_[token] || token;
-	        }
-	        return token;
-	    }
-
-	    var symbol, preErrorSymbol, state, action, a, r, yyval={},p,len,newState, expected;
-	    while (true) {
-	        // retreive state number from top of stack
-	        state = stack[stack.length-1];
-
-	        // use default actions if available
-	        if (this.defaultActions[state]) {
-	            action = this.defaultActions[state];
-	        } else {
-	            if (symbol == null)
-	                symbol = lex();
-	            // read action for current state and first input
-	            action = table[state] && table[state][symbol];
-	        }
-
-	        // handle parse error
-	        _handle_error:
-	        if (typeof action === 'undefined' || !action.length || !action[0]) {
-
-	            if (!recovering) {
-	                // Report error
-	                expected = [];
-	                for (p in table[state]) if (this.terminals_[p] && p > 2) {
-	                    expected.push("'"+this.terminals_[p]+"'");
-	                }
-	                var errStr = '';
-	                if (this.lexer.showPosition) {
-	                    errStr = 'Parse error on line '+(yylineno+1)+":\n"+this.lexer.showPosition()+"\nExpecting "+expected.join(', ') + ", got '" + this.terminals_[symbol]+ "'";
-	                } else {
-	                    errStr = 'Parse error on line '+(yylineno+1)+": Unexpected " +
-	                                  (symbol == 1 /*EOF*/ ? "end of input" :
-	                                              ("'"+(this.terminals_[symbol] || symbol)+"'"));
-	                }
-	                this.parseError(errStr,
-	                    {text: this.lexer.match, token: this.terminals_[symbol] || symbol, line: this.lexer.yylineno, loc: yyloc, expected: expected});
-	            }
-
-	            // just recovered from another error
-	            if (recovering == 3) {
-	                if (symbol == EOF) {
-	                    throw new Error(errStr || 'Parsing halted.');
-	                }
-
-	                // discard current lookahead and grab another
-	                yyleng = this.lexer.yyleng;
-	                yytext = this.lexer.yytext;
-	                yylineno = this.lexer.yylineno;
-	                yyloc = this.lexer.yylloc;
-	                symbol = lex();
-	            }
-
-	            // try to recover from error
-	            while (1) {
-	                // check for error recovery rule in this state
-	                if ((TERROR.toString()) in table[state]) {
-	                    break;
-	                }
-	                if (state == 0) {
-	                    throw new Error(errStr || 'Parsing halted.');
-	                }
-	                popStack(1);
-	                state = stack[stack.length-1];
-	            }
-
-	            preErrorSymbol = symbol; // save the lookahead token
-	            symbol = TERROR;         // insert generic error symbol as new lookahead
-	            state = stack[stack.length-1];
-	            action = table[state] && table[state][TERROR];
-	            recovering = 3; // allow 3 real symbols to be shifted before reporting a new error
-	        }
-
-	        // this shouldn't happen, unless resolve defaults are off
-	        if (action[0] instanceof Array && action.length > 1) {
-	            throw new Error('Parse Error: multiple actions possible at state: '+state+', token: '+symbol);
-	        }
-
-	        switch (action[0]) {
-
-	            case 1: // shift
-	                //this.shiftCount++;
-
-	                stack.push(symbol);
-	                vstack.push(this.lexer.yytext);
-	                lstack.push(this.lexer.yylloc);
-	                stack.push(action[1]); // push state
-	                symbol = null;
-	                if (!preErrorSymbol) { // normal execution/no error
-	                    yyleng = this.lexer.yyleng;
-	                    yytext = this.lexer.yytext;
-	                    yylineno = this.lexer.yylineno;
-	                    yyloc = this.lexer.yylloc;
-	                    if (recovering > 0)
-	                        recovering--;
-	                } else { // error just occurred, resume old lookahead f/ before error
-	                    symbol = preErrorSymbol;
-	                    preErrorSymbol = null;
-	                }
-	                break;
-
-	            case 2: // reduce
-	                //this.reductionCount++;
-
-	                len = this.productions_[action[1]][1];
-
-	                // perform semantic action
-	                yyval.$ = vstack[vstack.length-len]; // default to $$ = $1
-	                // default location, uses first token for firsts, last for lasts
-	                yyval._$ = {
-	                    first_line: lstack[lstack.length-(len||1)].first_line,
-	                    last_line: lstack[lstack.length-1].last_line,
-	                    first_column: lstack[lstack.length-(len||1)].first_column,
-	                    last_column: lstack[lstack.length-1].last_column
-	                };
-	                r = this.performAction.call(yyval, yytext, yyleng, yylineno, this.yy, action[1], vstack, lstack);
-
-	                if (typeof r !== 'undefined') {
-	                    return r;
-	                }
-
-	                // pop off stack
-	                if (len) {
-	                    stack = stack.slice(0,-1*len*2);
-	                    vstack = vstack.slice(0, -1*len);
-	                    lstack = lstack.slice(0, -1*len);
-	                }
-
-	                stack.push(this.productions_[action[1]][0]);    // push nonterminal (reduce)
-	                vstack.push(yyval.$);
-	                lstack.push(yyval._$);
-	                // goto new state = table[STATE][NONTERMINAL]
-	                newState = table[stack[stack.length-2]][stack[stack.length-1]];
-	                stack.push(newState);
-	                break;
-
-	            case 3: // accept
-	                return true;
-	        }
-
-	    }
-
-	    return true;
-	}};
-	/* Jison generated lexer */
-	var lexer = (function(){
-	var lexer = ({EOF:1,
-	parseError:function parseError(str, hash) {
-	        if (this.yy.parseError) {
-	            this.yy.parseError(str, hash);
-	        } else {
-	            throw new Error(str);
-	        }
-	    },
-	setInput:function (input) {
-	        this._input = input;
-	        this._more = this._less = this.done = false;
-	        this.yylineno = this.yyleng = 0;
-	        this.yytext = this.matched = this.match = '';
-	        this.conditionStack = ['INITIAL'];
-	        this.yylloc = {first_line:1,first_column:0,last_line:1,last_column:0};
-	        return this;
-	    },
-	input:function () {
-	        var ch = this._input[0];
-	        this.yytext+=ch;
-	        this.yyleng++;
-	        this.match+=ch;
-	        this.matched+=ch;
-	        var lines = ch.match(/\n/);
-	        if (lines) this.yylineno++;
-	        this._input = this._input.slice(1);
-	        return ch;
-	    },
-	unput:function (ch) {
-	        this._input = ch + this._input;
-	        return this;
-	    },
-	more:function () {
-	        this._more = true;
-	        return this;
-	    },
-	less:function (n) {
-	        this._input = this.match.slice(n) + this._input;
-	    },
-	pastInput:function () {
-	        var past = this.matched.substr(0, this.matched.length - this.match.length);
-	        return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
-	    },
-	upcomingInput:function () {
-	        var next = this.match;
-	        if (next.length < 20) {
-	            next += this._input.substr(0, 20-next.length);
-	        }
-	        return (next.substr(0,20)+(next.length > 20 ? '...':'')).replace(/\n/g, "");
-	    },
-	showPosition:function () {
-	        var pre = this.pastInput();
-	        var c = new Array(pre.length + 1).join("-");
-	        return pre + this.upcomingInput() + "\n" + c+"^";
-	    },
-	next:function () {
-	        if (this.done) {
-	            return this.EOF;
-	        }
-	        if (!this._input) this.done = true;
-
-	        var token,
-	            match,
-	            tempMatch,
-	            index,
-	            col,
-	            lines;
-	        if (!this._more) {
-	            this.yytext = '';
-	            this.match = '';
-	        }
-	        var rules = this._currentRules();
-	        for (var i=0;i < rules.length; i++) {
-	            tempMatch = this._input.match(this.rules[rules[i]]);
-	            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
-	                match = tempMatch;
-	                index = i;
-	                if (!this.options.flex) break;
-	            }
-	        }
-	        if (match) {
-	            lines = match[0].match(/\n.*/g);
-	            if (lines) this.yylineno += lines.length;
-	            this.yylloc = {first_line: this.yylloc.last_line,
-	                           last_line: this.yylineno+1,
-	                           first_column: this.yylloc.last_column,
-	                           last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match[0].length}
-	            this.yytext += match[0];
-	            this.match += match[0];
-	            this.yyleng = this.yytext.length;
-	            this._more = false;
-	            this._input = this._input.slice(match[0].length);
-	            this.matched += match[0];
-	            token = this.performAction.call(this, this.yy, this, rules[index],this.conditionStack[this.conditionStack.length-1]);
-	            if (this.done && this._input) this.done = false;
-	            if (token) return token;
-	            else return;
-	        }
-	        if (this._input === "") {
-	            return this.EOF;
-	        } else {
-	            this.parseError('Lexical error on line '+(this.yylineno+1)+'. Unrecognized text.\n'+this.showPosition(), 
-	                    {text: "", token: null, line: this.yylineno});
-	        }
-	    },
-	lex:function lex() {
-	        var r = this.next();
-	        if (typeof r !== 'undefined') {
-	            return r;
-	        } else {
-	            return this.lex();
-	        }
-	    },
-	begin:function begin(condition) {
-	        this.conditionStack.push(condition);
-	    },
-	popState:function popState() {
-	        return this.conditionStack.pop();
-	    },
-	_currentRules:function _currentRules() {
-	        return this.conditions[this.conditionStack[this.conditionStack.length-1]].rules;
-	    },
-	topState:function () {
-	        return this.conditionStack[this.conditionStack.length-2];
-	    },
-	pushState:function begin(condition) {
-	        this.begin(condition);
-	    }});
-	lexer.options = {};
-	lexer.performAction = function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
-
-	var YYSTATE=YY_START
-	switch($avoiding_name_collisions) {
-	case 0:/* skip whitespace */
-	break;
-	case 1:return 6
-	break;
-	case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4
-	break;
-	case 3:return 17
-	break;
-	case 4:return 18
-	break;
-	case 5:return 23
-	break;
-	case 6:return 24
-	break;
-	case 7:return 22
-	break;
-	case 8:return 21
-	break;
-	case 9:return 10
-	break;
-	case 10:return 11
-	break;
-	case 11:return 8
-	break;
-	case 12:return 14
-	break;
-	case 13:return 'INVALID'
-	break;
-	}
-	};
-	lexer.rules = [/^(?:\s+)/,/^(?:(-?([0-9]|[1-9][0-9]+))(\.[0-9]+)?([eE][-+]?[0-9]+)?\b)/,/^(?:"(?:\\[\\"bfnrt/]|\\u[a-fA-F0-9]{4}|[^\\\0-\x09\x0a-\x1f"])*")/,/^(?:\{)/,/^(?:\})/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?::)/,/^(?:true\b)/,/^(?:false\b)/,/^(?:null\b)/,/^(?:$)/,/^(?:.)/];
-	lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13],"inclusive":true}};
-
-
-	;
-	return lexer;})()
-	parser.lexer = lexer;
-	return parser;
-	})();
-	if (true) {
-	  exports.parser = jsonlint;
-	  exports.parse = jsonlint.parse;
-	}
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* ***** BEGIN LICENSE BLOCK *****
-	 * Distributed under the BSD license:
-	 *
-	 * Copyright (c) 2010, Ajax.org B.V.
-	 * All rights reserved.
-	 * 
-	 * Redistribution and use in source and binary forms, with or without
-	 * modification, are permitted provided that the following conditions are met:
-	 *     * Redistributions of source code must retain the above copyright
-	 *       notice, this list of conditions and the following disclaimer.
-	 *     * Redistributions in binary form must reproduce the above copyright
-	 *       notice, this list of conditions and the following disclaimer in the
-	 *       documentation and/or other materials provided with the distribution.
-	 *     * Neither the name of Ajax.org B.V. nor the
-	 *       names of its contributors may be used to endorse or promote products
-	 *       derived from this software without specific prior written permission.
-	 * 
-	 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-	 * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-	 * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-	 * DISCLAIMED. IN NO EVENT SHALL AJAX.ORG B.V. BE LIABLE FOR ANY
-	 * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-	 * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-	 * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-	 * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-	 * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-	 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-	 *
-	 * ***** END LICENSE BLOCK ***** */
-
-	ace.define('ace/theme/jsoneditor', ['require', 'exports', 'module', 'ace/lib/dom'], function(acequire, exports, module) {
-
-	exports.isDark = false;
-	exports.cssClass = "ace-jsoneditor";
-	exports.cssText = ".ace-jsoneditor .ace_gutter {\
-	background: #ebebeb;\
-	color: #333\
-	}\
-	\
-	.ace-jsoneditor.ace_editor {\
-	font-family: droid sans mono, monospace, courier new, courier, sans-serif;\
-	line-height: 1.3;\
-	}\
-	.ace-jsoneditor .ace_print-margin {\
-	width: 1px;\
-	background: #e8e8e8\
-	}\
-	.ace-jsoneditor .ace_scroller {\
-	background-color: #FFFFFF\
-	}\
-	.ace-jsoneditor .ace_text-layer {\
-	color: gray\
-	}\
-	.ace-jsoneditor .ace_variable {\
-	color: #1a1a1a\
-	}\
-	.ace-jsoneditor .ace_cursor {\
-	border-left: 2px solid #000000\
-	}\
-	.ace-jsoneditor .ace_overwrite-cursors .ace_cursor {\
-	border-left: 0px;\
-	border-bottom: 1px solid #000000\
-	}\
-	.ace-jsoneditor .ace_marker-layer .ace_selection {\
-	background: #D5DDF6\
-	}\
-	.ace-jsoneditor.ace_multiselect .ace_selection.ace_start {\
-	box-shadow: 0 0 3px 0px #FFFFFF;\
-	border-radius: 2px\
-	}\
-	.ace-jsoneditor .ace_marker-layer .ace_step {\
-	background: rgb(255, 255, 0)\
-	}\
-	.ace-jsoneditor .ace_marker-layer .ace_bracket {\
-	margin: -1px 0 0 -1px;\
-	border: 1px solid #BFBFBF\
-	}\
-	.ace-jsoneditor .ace_marker-layer .ace_active-line {\
-	background: #FFFBD1\
-	}\
-	.ace-jsoneditor .ace_gutter-active-line {\
-	background-color : #dcdcdc\
-	}\
-	.ace-jsoneditor .ace_marker-layer .ace_selected-word {\
-	border: 1px solid #D5DDF6\
-	}\
-	.ace-jsoneditor .ace_invisible {\
-	color: #BFBFBF\
-	}\
-	.ace-jsoneditor .ace_keyword,\
-	.ace-jsoneditor .ace_meta,\
-	.ace-jsoneditor .ace_support.ace_constant.ace_property-value {\
-	color: #AF956F\
-	}\
-	.ace-jsoneditor .ace_keyword.ace_operator {\
-	color: #484848\
-	}\
-	.ace-jsoneditor .ace_keyword.ace_other.ace_unit {\
-	color: #96DC5F\
-	}\
-	.ace-jsoneditor .ace_constant.ace_language {\
-	color: darkorange\
-	}\
-	.ace-jsoneditor .ace_constant.ace_numeric {\
-	color: red\
-	}\
-	.ace-jsoneditor .ace_constant.ace_character.ace_entity {\
-	color: #BF78CC\
-	}\
-	.ace-jsoneditor .ace_invalid {\
-	color: #FFFFFF;\
-	background-color: #FF002A;\
-	}\
-	.ace-jsoneditor .ace_fold {\
-	background-color: #AF956F;\
-	border-color: #000000\
-	}\
-	.ace-jsoneditor .ace_storage,\
-	.ace-jsoneditor .ace_support.ace_class,\
-	.ace-jsoneditor .ace_support.ace_function,\
-	.ace-jsoneditor .ace_support.ace_other,\
-	.ace-jsoneditor .ace_support.ace_type {\
-	color: #C52727\
-	}\
-	.ace-jsoneditor .ace_string {\
-	color: green\
-	}\
-	.ace-jsoneditor .ace_comment {\
-	color: #BCC8BA\
-	}\
-	.ace-jsoneditor .ace_entity.ace_name.ace_tag,\
-	.ace-jsoneditor .ace_entity.ace_other.ace_attribute-name {\
-	color: #606060\
-	}\
-	.ace-jsoneditor .ace_markup.ace_underline {\
-	text-decoration: underline\
-	}\
-	.ace-jsoneditor .ace_indent-guide {\
-	background: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAE0lEQVQImWP4////f4bLly//BwAmVgd1/w11/gAAAABJRU5ErkJggg==\") right repeat-y\
-	}";
-
-	var dom = acequire("../lib/dom");
-	dom.importCssString(exports.cssText, exports.cssClass);
-	});
-
-
-/***/ },
-/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* ***** BEGIN LICENSE BLOCK *****
@@ -10519,7 +10035,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	init(true);function init(packaged) {
 
-	    options.packaged = packaged || acequire.packaged || module.packaged || (global.define && __webpack_require__(18).packaged);
+	    options.packaged = packaged || acequire.packaged || module.packaged || (global.define && __webpack_require__(16).packaged);
 
 	    if (!global.document)
 	        return "";
@@ -23008,7 +22524,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    try {
 	            var workerSrc = mod.src;
-	    var Blob = __webpack_require__(19);
+	    var Blob = __webpack_require__(17);
 	    var blob = new Blob([ workerSrc ], { type: 'application/javascript' });
 	    var blobUrl = (window.URL || window.webkitURL).createObjectURL(blob);
 
@@ -25202,7 +24718,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = window.ace.acequire("ace/ace");
 
 /***/ },
-/* 15 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	ace.define("ace/mode/json_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules"], function(acequire, exports, module) {
@@ -25809,7 +25325,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    };
 
 	    this.createWorker = function(session) {
-	        var worker = new WorkerClient(["ace"], __webpack_require__(17), "JsonWorker");
+	        var worker = new WorkerClient(["ace"], __webpack_require__(18), "JsonWorker");
 	        worker.attachToDocument(session.getDocument());
 
 	        worker.on("error", function(e) {
@@ -25832,7 +25348,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 16 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	ace.define("ace/ext/searchbox",["require","exports","module","ace/lib/dom","ace/lib/lang","ace/lib/event","ace/keyboard/hash_handler","ace/lib/keys"], function(acequire, exports, module) {
@@ -26246,21 +25762,164 @@ return /******/ (function(modules) { // webpackBootstrap
 	            
 
 /***/ },
-/* 17 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports.id = 'ace/mode/json_worker';
-	module.exports.src = "\"no use strict\";(function(window){if(void 0===window.window||!window.document){window.console=function(){var msgs=Array.prototype.slice.call(arguments,0);postMessage({type:\"log\",data:msgs})},window.console.error=window.console.warn=window.console.log=window.console.trace=window.console,window.window=window,window.ace=window,window.onerror=function(message,file,line,col,err){postMessage({type:\"error\",data:{message:message,file:file,line:line,col:col,stack:err.stack}})},window.normalizeModule=function(parentId,moduleName){if(-1!==moduleName.indexOf(\"!\")){var chunks=moduleName.split(\"!\");return window.normalizeModule(parentId,chunks[0])+\"!\"+window.normalizeModule(parentId,chunks[1])}if(\".\"==moduleName.charAt(0)){var base=parentId.split(\"/\").slice(0,-1).join(\"/\");for(moduleName=(base?base+\"/\":\"\")+moduleName;-1!==moduleName.indexOf(\".\")&&previous!=moduleName;){var previous=moduleName;moduleName=moduleName.replace(/^\\.\\//,\"\").replace(/\\/\\.\\//,\"/\").replace(/[^\\/]+\\/\\.\\.\\//,\"\")}}return moduleName},window.acequire=function(parentId,id){if(id||(id=parentId,parentId=null),!id.charAt)throw Error(\"worker.js acequire() accepts only (parentId, id) as arguments\");id=window.normalizeModule(parentId,id);var module=window.acequire.modules[id];if(module)return module.initialized||(module.initialized=!0,module.exports=module.factory().exports),module.exports;var chunks=id.split(\"/\");if(!window.acequire.tlns)return console.log(\"unable to load \"+id);chunks[0]=window.acequire.tlns[chunks[0]]||chunks[0];var path=chunks.join(\"/\")+\".js\";return window.acequire.id=id,importScripts(path),window.acequire(parentId,id)},window.acequire.modules={},window.acequire.tlns={},window.define=function(id,deps,factory){if(2==arguments.length?(factory=deps,\"string\"!=typeof id&&(deps=id,id=window.acequire.id)):1==arguments.length&&(factory=id,deps=[],id=window.acequire.id),\"function\"!=typeof factory)return window.acequire.modules[id]={exports:factory,initialized:!0},void 0;deps.length||(deps=[\"require\",\"exports\",\"module\"]);var req=function(childId){return window.acequire(id,childId)};window.acequire.modules[id]={exports:{},factory:function(){var module=this,returnExports=factory.apply(this,deps.map(function(dep){switch(dep){case\"require\":return req;case\"exports\":return module.exports;case\"module\":return module;default:return req(dep)}}));return returnExports&&(module.exports=returnExports),module}}},window.define.amd={},window.initBaseUrls=function initBaseUrls(topLevelNamespaces){acequire.tlns=topLevelNamespaces},window.initSender=function initSender(){var EventEmitter=window.acequire(\"ace/lib/event_emitter\").EventEmitter,oop=window.acequire(\"ace/lib/oop\"),Sender=function(){};return function(){oop.implement(this,EventEmitter),this.callback=function(data,callbackId){postMessage({type:\"call\",id:callbackId,data:data})},this.emit=function(name,data){postMessage({type:\"event\",name:name,data:data})}}.call(Sender.prototype),new Sender};var main=window.main=null,sender=window.sender=null;window.onmessage=function(e){var msg=e.data;if(msg.command){if(!main[msg.command])throw Error(\"Unknown command:\"+msg.command);main[msg.command].apply(main,msg.args)}else if(msg.init){initBaseUrls(msg.tlns),acequire(\"ace/lib/es5-shim\"),sender=window.sender=initSender();var clazz=acequire(msg.module)[msg.classname];main=window.main=new clazz(sender)}else msg.event&&sender&&sender._signal(msg.event,msg.data)}}})(this),ace.define(\"ace/lib/oop\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";exports.inherits=function(ctor,superCtor){ctor.super_=superCtor,ctor.prototype=Object.create(superCtor.prototype,{constructor:{value:ctor,enumerable:!1,writable:!0,configurable:!0}})},exports.mixin=function(obj,mixin){for(var key in mixin)obj[key]=mixin[key];return obj},exports.implement=function(proto,mixin){exports.mixin(proto,mixin)}}),ace.define(\"ace/lib/event_emitter\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";var EventEmitter={},stopPropagation=function(){this.propagationStopped=!0},preventDefault=function(){this.defaultPrevented=!0};EventEmitter._emit=EventEmitter._dispatchEvent=function(eventName,e){this._eventRegistry||(this._eventRegistry={}),this._defaultHandlers||(this._defaultHandlers={});var listeners=this._eventRegistry[eventName]||[],defaultHandler=this._defaultHandlers[eventName];if(listeners.length||defaultHandler){\"object\"==typeof e&&e||(e={}),e.type||(e.type=eventName),e.stopPropagation||(e.stopPropagation=stopPropagation),e.preventDefault||(e.preventDefault=preventDefault),listeners=listeners.slice();for(var i=0;listeners.length>i&&(listeners[i](e,this),!e.propagationStopped);i++);return defaultHandler&&!e.defaultPrevented?defaultHandler(e,this):void 0}},EventEmitter._signal=function(eventName,e){var listeners=(this._eventRegistry||{})[eventName];if(listeners){listeners=listeners.slice();for(var i=0;listeners.length>i;i++)listeners[i](e,this)}},EventEmitter.once=function(eventName,callback){var _self=this;callback&&this.addEventListener(eventName,function newCallback(){_self.removeEventListener(eventName,newCallback),callback.apply(null,arguments)})},EventEmitter.setDefaultHandler=function(eventName,callback){var handlers=this._defaultHandlers;if(handlers||(handlers=this._defaultHandlers={_disabled_:{}}),handlers[eventName]){var old=handlers[eventName],disabled=handlers._disabled_[eventName];disabled||(handlers._disabled_[eventName]=disabled=[]),disabled.push(old);var i=disabled.indexOf(callback);-1!=i&&disabled.splice(i,1)}handlers[eventName]=callback},EventEmitter.removeDefaultHandler=function(eventName,callback){var handlers=this._defaultHandlers;if(handlers){var disabled=handlers._disabled_[eventName];if(handlers[eventName]==callback)handlers[eventName],disabled&&this.setDefaultHandler(eventName,disabled.pop());else if(disabled){var i=disabled.indexOf(callback);-1!=i&&disabled.splice(i,1)}}},EventEmitter.on=EventEmitter.addEventListener=function(eventName,callback,capturing){this._eventRegistry=this._eventRegistry||{};var listeners=this._eventRegistry[eventName];return listeners||(listeners=this._eventRegistry[eventName]=[]),-1==listeners.indexOf(callback)&&listeners[capturing?\"unshift\":\"push\"](callback),callback},EventEmitter.off=EventEmitter.removeListener=EventEmitter.removeEventListener=function(eventName,callback){this._eventRegistry=this._eventRegistry||{};var listeners=this._eventRegistry[eventName];if(listeners){var index=listeners.indexOf(callback);-1!==index&&listeners.splice(index,1)}},EventEmitter.removeAllListeners=function(eventName){this._eventRegistry&&(this._eventRegistry[eventName]=[])},exports.EventEmitter=EventEmitter}),ace.define(\"ace/range\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";var comparePoints=function(p1,p2){return p1.row-p2.row||p1.column-p2.column},Range=function(startRow,startColumn,endRow,endColumn){this.start={row:startRow,column:startColumn},this.end={row:endRow,column:endColumn}};(function(){this.isEqual=function(range){return this.start.row===range.start.row&&this.end.row===range.end.row&&this.start.column===range.start.column&&this.end.column===range.end.column},this.toString=function(){return\"Range: [\"+this.start.row+\"/\"+this.start.column+\"] -> [\"+this.end.row+\"/\"+this.end.column+\"]\"},this.contains=function(row,column){return 0==this.compare(row,column)},this.compareRange=function(range){var cmp,end=range.end,start=range.start;return cmp=this.compare(end.row,end.column),1==cmp?(cmp=this.compare(start.row,start.column),1==cmp?2:0==cmp?1:0):-1==cmp?-2:(cmp=this.compare(start.row,start.column),-1==cmp?-1:1==cmp?42:0)},this.comparePoint=function(p){return this.compare(p.row,p.column)},this.containsRange=function(range){return 0==this.comparePoint(range.start)&&0==this.comparePoint(range.end)},this.intersects=function(range){var cmp=this.compareRange(range);return-1==cmp||0==cmp||1==cmp},this.isEnd=function(row,column){return this.end.row==row&&this.end.column==column},this.isStart=function(row,column){return this.start.row==row&&this.start.column==column},this.setStart=function(row,column){\"object\"==typeof row?(this.start.column=row.column,this.start.row=row.row):(this.start.row=row,this.start.column=column)},this.setEnd=function(row,column){\"object\"==typeof row?(this.end.column=row.column,this.end.row=row.row):(this.end.row=row,this.end.column=column)},this.inside=function(row,column){return 0==this.compare(row,column)?this.isEnd(row,column)||this.isStart(row,column)?!1:!0:!1},this.insideStart=function(row,column){return 0==this.compare(row,column)?this.isEnd(row,column)?!1:!0:!1},this.insideEnd=function(row,column){return 0==this.compare(row,column)?this.isStart(row,column)?!1:!0:!1},this.compare=function(row,column){return this.isMultiLine()||row!==this.start.row?this.start.row>row?-1:row>this.end.row?1:this.start.row===row?column>=this.start.column?0:-1:this.end.row===row?this.end.column>=column?0:1:0:this.start.column>column?-1:column>this.end.column?1:0},this.compareStart=function(row,column){return this.start.row==row&&this.start.column==column?-1:this.compare(row,column)},this.compareEnd=function(row,column){return this.end.row==row&&this.end.column==column?1:this.compare(row,column)},this.compareInside=function(row,column){return this.end.row==row&&this.end.column==column?1:this.start.row==row&&this.start.column==column?-1:this.compare(row,column)},this.clipRows=function(firstRow,lastRow){if(this.end.row>lastRow)var end={row:lastRow+1,column:0};else if(firstRow>this.end.row)var end={row:firstRow,column:0};if(this.start.row>lastRow)var start={row:lastRow+1,column:0};else if(firstRow>this.start.row)var start={row:firstRow,column:0};return Range.fromPoints(start||this.start,end||this.end)},this.extend=function(row,column){var cmp=this.compare(row,column);if(0==cmp)return this;if(-1==cmp)var start={row:row,column:column};else var end={row:row,column:column};return Range.fromPoints(start||this.start,end||this.end)},this.isEmpty=function(){return this.start.row===this.end.row&&this.start.column===this.end.column},this.isMultiLine=function(){return this.start.row!==this.end.row},this.clone=function(){return Range.fromPoints(this.start,this.end)},this.collapseRows=function(){return 0==this.end.column?new Range(this.start.row,0,Math.max(this.start.row,this.end.row-1),0):new Range(this.start.row,0,this.end.row,0)},this.toScreenRange=function(session){var screenPosStart=session.documentToScreenPosition(this.start),screenPosEnd=session.documentToScreenPosition(this.end);return new Range(screenPosStart.row,screenPosStart.column,screenPosEnd.row,screenPosEnd.column)},this.moveBy=function(row,column){this.start.row+=row,this.start.column+=column,this.end.row+=row,this.end.column+=column}}).call(Range.prototype),Range.fromPoints=function(start,end){return new Range(start.row,start.column,end.row,end.column)},Range.comparePoints=comparePoints,Range.comparePoints=function(p1,p2){return p1.row-p2.row||p1.column-p2.column},exports.Range=Range}),ace.define(\"ace/anchor\",[\"require\",\"exports\",\"module\",\"ace/lib/oop\",\"ace/lib/event_emitter\"],function(acequire,exports){\"use strict\";var oop=acequire(\"./lib/oop\"),EventEmitter=acequire(\"./lib/event_emitter\").EventEmitter,Anchor=exports.Anchor=function(doc,row,column){this.$onChange=this.onChange.bind(this),this.attach(doc),column===void 0?this.setPosition(row.row,row.column):this.setPosition(row,column)};(function(){oop.implement(this,EventEmitter),this.getPosition=function(){return this.$clipPositionToDocument(this.row,this.column)},this.getDocument=function(){return this.document},this.$insertRight=!1,this.onChange=function(e){var delta=e.data,range=delta.range;if(!(range.start.row==range.end.row&&range.start.row!=this.row||range.start.row>this.row||range.start.row==this.row&&range.start.column>this.column)){var row=this.row,column=this.column,start=range.start,end=range.end;\"insertText\"===delta.action?start.row===row&&column>=start.column?start.column===column&&this.$insertRight||(start.row===end.row?column+=end.column-start.column:(column-=start.column,row+=end.row-start.row)):start.row!==end.row&&row>start.row&&(row+=end.row-start.row):\"insertLines\"===delta.action?start.row===row&&0===column&&this.$insertRight||row>=start.row&&(row+=end.row-start.row):\"removeText\"===delta.action?start.row===row&&column>start.column?column=end.column>=column?start.column:Math.max(0,column-(end.column-start.column)):start.row!==end.row&&row>start.row?(end.row===row&&(column=Math.max(0,column-end.column)+start.column),row-=end.row-start.row):end.row===row&&(row-=end.row-start.row,column=Math.max(0,column-end.column)+start.column):\"removeLines\"==delta.action&&row>=start.row&&(row>=end.row?row-=end.row-start.row:(row=start.row,column=0)),this.setPosition(row,column,!0)}},this.setPosition=function(row,column,noClip){var pos;if(pos=noClip?{row:row,column:column}:this.$clipPositionToDocument(row,column),this.row!=pos.row||this.column!=pos.column){var old={row:this.row,column:this.column};this.row=pos.row,this.column=pos.column,this._signal(\"change\",{old:old,value:pos})}},this.detach=function(){this.document.removeEventListener(\"change\",this.$onChange)},this.attach=function(doc){this.document=doc||this.document,this.document.on(\"change\",this.$onChange)},this.$clipPositionToDocument=function(row,column){var pos={};return row>=this.document.getLength()?(pos.row=Math.max(0,this.document.getLength()-1),pos.column=this.document.getLine(pos.row).length):0>row?(pos.row=0,pos.column=0):(pos.row=row,pos.column=Math.min(this.document.getLine(pos.row).length,Math.max(0,column))),0>column&&(pos.column=0),pos}}).call(Anchor.prototype)}),ace.define(\"ace/document\",[\"require\",\"exports\",\"module\",\"ace/lib/oop\",\"ace/lib/event_emitter\",\"ace/range\",\"ace/anchor\"],function(acequire,exports){\"use strict\";var oop=acequire(\"./lib/oop\"),EventEmitter=acequire(\"./lib/event_emitter\").EventEmitter,Range=acequire(\"./range\").Range,Anchor=acequire(\"./anchor\").Anchor,Document=function(text){this.$lines=[],0===text.length?this.$lines=[\"\"]:Array.isArray(text)?this._insertLines(0,text):this.insert({row:0,column:0},text)};(function(){oop.implement(this,EventEmitter),this.setValue=function(text){var len=this.getLength();this.remove(new Range(0,0,len,this.getLine(len-1).length)),this.insert({row:0,column:0},text)},this.getValue=function(){return this.getAllLines().join(this.getNewLineCharacter())},this.createAnchor=function(row,column){return new Anchor(this,row,column)},this.$split=0===\"aaa\".split(/a/).length?function(text){return text.replace(/\\r\\n|\\r/g,\"\\n\").split(\"\\n\")}:function(text){return text.split(/\\r\\n|\\r|\\n/)},this.$detectNewLine=function(text){var match=text.match(/^.*?(\\r\\n|\\r|\\n)/m);this.$autoNewLine=match?match[1]:\"\\n\",this._signal(\"changeNewLineMode\")},this.getNewLineCharacter=function(){switch(this.$newLineMode){case\"windows\":return\"\\r\\n\";case\"unix\":return\"\\n\";default:return this.$autoNewLine||\"\\n\"}},this.$autoNewLine=\"\",this.$newLineMode=\"auto\",this.setNewLineMode=function(newLineMode){this.$newLineMode!==newLineMode&&(this.$newLineMode=newLineMode,this._signal(\"changeNewLineMode\"))},this.getNewLineMode=function(){return this.$newLineMode},this.isNewLine=function(text){return\"\\r\\n\"==text||\"\\r\"==text||\"\\n\"==text},this.getLine=function(row){return this.$lines[row]||\"\"},this.getLines=function(firstRow,lastRow){return this.$lines.slice(firstRow,lastRow+1)},this.getAllLines=function(){return this.getLines(0,this.getLength())},this.getLength=function(){return this.$lines.length},this.getTextRange=function(range){if(range.start.row==range.end.row)return this.getLine(range.start.row).substring(range.start.column,range.end.column);var lines=this.getLines(range.start.row,range.end.row);lines[0]=(lines[0]||\"\").substring(range.start.column);var l=lines.length-1;return range.end.row-range.start.row==l&&(lines[l]=lines[l].substring(0,range.end.column)),lines.join(this.getNewLineCharacter())},this.$clipPosition=function(position){var length=this.getLength();return position.row>=length?(position.row=Math.max(0,length-1),position.column=this.getLine(length-1).length):0>position.row&&(position.row=0),position},this.insert=function(position,text){if(!text||0===text.length)return position;position=this.$clipPosition(position),1>=this.getLength()&&this.$detectNewLine(text);var lines=this.$split(text),firstLine=lines.splice(0,1)[0],lastLine=0==lines.length?null:lines.splice(lines.length-1,1)[0];return position=this.insertInLine(position,firstLine),null!==lastLine&&(position=this.insertNewLine(position),position=this._insertLines(position.row,lines),position=this.insertInLine(position,lastLine||\"\")),position},this.insertLines=function(row,lines){return row>=this.getLength()?this.insert({row:row,column:0},\"\\n\"+lines.join(\"\\n\")):this._insertLines(Math.max(row,0),lines)},this._insertLines=function(row,lines){if(0==lines.length)return{row:row,column:0};for(;lines.length>61440;){var end=this._insertLines(row,lines.slice(0,61440));lines=lines.slice(61440),row=end.row}var args=[row,0];args.push.apply(args,lines),this.$lines.splice.apply(this.$lines,args);var range=new Range(row,0,row+lines.length,0),delta={action:\"insertLines\",range:range,lines:lines};return this._signal(\"change\",{data:delta}),range.end},this.insertNewLine=function(position){position=this.$clipPosition(position);var line=this.$lines[position.row]||\"\";this.$lines[position.row]=line.substring(0,position.column),this.$lines.splice(position.row+1,0,line.substring(position.column,line.length));var end={row:position.row+1,column:0},delta={action:\"insertText\",range:Range.fromPoints(position,end),text:this.getNewLineCharacter()};return this._signal(\"change\",{data:delta}),end},this.insertInLine=function(position,text){if(0==text.length)return position;var line=this.$lines[position.row]||\"\";this.$lines[position.row]=line.substring(0,position.column)+text+line.substring(position.column);var end={row:position.row,column:position.column+text.length},delta={action:\"insertText\",range:Range.fromPoints(position,end),text:text};return this._signal(\"change\",{data:delta}),end},this.remove=function(range){if(range instanceof Range||(range=Range.fromPoints(range.start,range.end)),range.start=this.$clipPosition(range.start),range.end=this.$clipPosition(range.end),range.isEmpty())return range.start;var firstRow=range.start.row,lastRow=range.end.row;if(range.isMultiLine()){var firstFullRow=0==range.start.column?firstRow:firstRow+1,lastFullRow=lastRow-1;range.end.column>0&&this.removeInLine(lastRow,0,range.end.column),lastFullRow>=firstFullRow&&this._removeLines(firstFullRow,lastFullRow),firstFullRow!=firstRow&&(this.removeInLine(firstRow,range.start.column,this.getLine(firstRow).length),this.removeNewLine(range.start.row))}else this.removeInLine(firstRow,range.start.column,range.end.column);return range.start},this.removeInLine=function(row,startColumn,endColumn){if(startColumn!=endColumn){var range=new Range(row,startColumn,row,endColumn),line=this.getLine(row),removed=line.substring(startColumn,endColumn),newLine=line.substring(0,startColumn)+line.substring(endColumn,line.length);this.$lines.splice(row,1,newLine);var delta={action:\"removeText\",range:range,text:removed};return this._signal(\"change\",{data:delta}),range.start}},this.removeLines=function(firstRow,lastRow){return 0>firstRow||lastRow>=this.getLength()?this.remove(new Range(firstRow,0,lastRow+1,0)):this._removeLines(firstRow,lastRow)},this._removeLines=function(firstRow,lastRow){var range=new Range(firstRow,0,lastRow+1,0),removed=this.$lines.splice(firstRow,lastRow-firstRow+1),delta={action:\"removeLines\",range:range,nl:this.getNewLineCharacter(),lines:removed};return this._signal(\"change\",{data:delta}),removed},this.removeNewLine=function(row){var firstLine=this.getLine(row),secondLine=this.getLine(row+1),range=new Range(row,firstLine.length,row+1,0),line=firstLine+secondLine;this.$lines.splice(row,2,line);var delta={action:\"removeText\",range:range,text:this.getNewLineCharacter()};this._signal(\"change\",{data:delta})},this.replace=function(range,text){if(range instanceof Range||(range=Range.fromPoints(range.start,range.end)),0==text.length&&range.isEmpty())return range.start;if(text==this.getTextRange(range))return range.end;if(this.remove(range),text)var end=this.insert(range.start,text);else end=range.start;return end},this.applyDeltas=function(deltas){for(var i=0;deltas.length>i;i++){var delta=deltas[i],range=Range.fromPoints(delta.range.start,delta.range.end);\"insertLines\"==delta.action?this.insertLines(range.start.row,delta.lines):\"insertText\"==delta.action?this.insert(range.start,delta.text):\"removeLines\"==delta.action?this._removeLines(range.start.row,range.end.row-1):\"removeText\"==delta.action&&this.remove(range)}},this.revertDeltas=function(deltas){for(var i=deltas.length-1;i>=0;i--){var delta=deltas[i],range=Range.fromPoints(delta.range.start,delta.range.end);\"insertLines\"==delta.action?this._removeLines(range.start.row,range.end.row-1):\"insertText\"==delta.action?this.remove(range):\"removeLines\"==delta.action?this._insertLines(range.start.row,delta.lines):\"removeText\"==delta.action&&this.insert(range.start,delta.text)}},this.indexToPosition=function(index,startRow){for(var lines=this.$lines||this.getAllLines(),newlineLength=this.getNewLineCharacter().length,i=startRow||0,l=lines.length;l>i;i++)if(index-=lines[i].length+newlineLength,0>index)return{row:i,column:index+lines[i].length+newlineLength};return{row:l-1,column:lines[l-1].length}},this.positionToIndex=function(pos,startRow){for(var lines=this.$lines||this.getAllLines(),newlineLength=this.getNewLineCharacter().length,index=0,row=Math.min(pos.row,lines.length),i=startRow||0;row>i;++i)index+=lines[i].length+newlineLength;return index+pos.column}}).call(Document.prototype),exports.Document=Document}),ace.define(\"ace/lib/lang\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";exports.last=function(a){return a[a.length-1]},exports.stringReverse=function(string){return string.split(\"\").reverse().join(\"\")},exports.stringRepeat=function(string,count){for(var result=\"\";count>0;)1&count&&(result+=string),(count>>=1)&&(string+=string);return result};var trimBeginRegexp=/^\\s\\s*/,trimEndRegexp=/\\s\\s*$/;exports.stringTrimLeft=function(string){return string.replace(trimBeginRegexp,\"\")},exports.stringTrimRight=function(string){return string.replace(trimEndRegexp,\"\")},exports.copyObject=function(obj){var copy={};for(var key in obj)copy[key]=obj[key];return copy},exports.copyArray=function(array){for(var copy=[],i=0,l=array.length;l>i;i++)copy[i]=array[i]&&\"object\"==typeof array[i]?this.copyObject(array[i]):array[i];return copy},exports.deepCopy=function(obj){if(\"object\"!=typeof obj||!obj)return obj;var cons=obj.constructor;if(cons===RegExp)return obj;var copy=cons();for(var key in obj)copy[key]=\"object\"==typeof obj[key]?exports.deepCopy(obj[key]):obj[key];return copy},exports.arrayToMap=function(arr){for(var map={},i=0;arr.length>i;i++)map[arr[i]]=1;return map},exports.createMap=function(props){var map=Object.create(null);for(var i in props)map[i]=props[i];return map},exports.arrayRemove=function(array,value){for(var i=0;array.length>=i;i++)value===array[i]&&array.splice(i,1)},exports.escapeRegExp=function(str){return str.replace(/([.*+?^${}()|[\\]\\/\\\\])/g,\"\\\\$1\")},exports.escapeHTML=function(str){return str.replace(/&/g,\"&#38;\").replace(/\"/g,\"&#34;\").replace(/'/g,\"&#39;\").replace(/</g,\"&#60;\")},exports.getMatchOffsets=function(string,regExp){var matches=[];return string.replace(regExp,function(str){matches.push({offset:arguments[arguments.length-2],length:str.length})}),matches},exports.deferredCall=function(fcn){var timer=null,callback=function(){timer=null,fcn()},deferred=function(timeout){return deferred.cancel(),timer=setTimeout(callback,timeout||0),deferred};return deferred.schedule=deferred,deferred.call=function(){return this.cancel(),fcn(),deferred},deferred.cancel=function(){return clearTimeout(timer),timer=null,deferred},deferred.isPending=function(){return timer},deferred},exports.delayedCall=function(fcn,defaultTimeout){var timer=null,callback=function(){timer=null,fcn()},_self=function(timeout){null==timer&&(timer=setTimeout(callback,timeout||defaultTimeout))};return _self.delay=function(timeout){timer&&clearTimeout(timer),timer=setTimeout(callback,timeout||defaultTimeout)},_self.schedule=_self,_self.call=function(){this.cancel(),fcn()},_self.cancel=function(){timer&&clearTimeout(timer),timer=null},_self.isPending=function(){return timer},_self}}),ace.define(\"ace/worker/mirror\",[\"require\",\"exports\",\"module\",\"ace/document\",\"ace/lib/lang\"],function(acequire,exports){\"use strict\";var Document=acequire(\"../document\").Document,lang=acequire(\"../lib/lang\"),Mirror=exports.Mirror=function(sender){this.sender=sender;var doc=this.doc=new Document(\"\"),deferredUpdate=this.deferredUpdate=lang.delayedCall(this.onUpdate.bind(this)),_self=this;sender.on(\"change\",function(e){return doc.applyDeltas(e.data),_self.$timeout?deferredUpdate.schedule(_self.$timeout):(_self.onUpdate(),void 0)})};(function(){this.$timeout=500,this.setTimeout=function(timeout){this.$timeout=timeout},this.setValue=function(value){this.doc.setValue(value),this.deferredUpdate.schedule(this.$timeout)},this.getValue=function(callbackId){this.sender.callback(this.doc.getValue(),callbackId)},this.onUpdate=function(){},this.isPending=function(){return this.deferredUpdate.isPending()}}).call(Mirror.prototype)}),ace.define(\"ace/mode/json/json_parse\",[\"require\",\"exports\",\"module\"],function(){\"use strict\";var at,ch,text,value,escapee={'\"':'\"',\"\\\\\":\"\\\\\",\"/\":\"/\",b:\"\\b\",f:\"\\f\",n:\"\\n\",r:\"\\r\",t:\"\t\"},error=function(m){throw{name:\"SyntaxError\",message:m,at:at,text:text}},next=function(c){return c&&c!==ch&&error(\"Expected '\"+c+\"' instead of '\"+ch+\"'\"),ch=text.charAt(at),at+=1,ch},number=function(){var number,string=\"\";for(\"-\"===ch&&(string=\"-\",next(\"-\"));ch>=\"0\"&&\"9\">=ch;)string+=ch,next();if(\".\"===ch)for(string+=\".\";next()&&ch>=\"0\"&&\"9\">=ch;)string+=ch;if(\"e\"===ch||\"E\"===ch)for(string+=ch,next(),(\"-\"===ch||\"+\"===ch)&&(string+=ch,next());ch>=\"0\"&&\"9\">=ch;)string+=ch,next();return number=+string,isNaN(number)?(error(\"Bad number\"),void 0):number},string=function(){var hex,i,uffff,string=\"\";if('\"'===ch)for(;next();){if('\"'===ch)return next(),string;if(\"\\\\\"===ch)if(next(),\"u\"===ch){for(uffff=0,i=0;4>i&&(hex=parseInt(next(),16),isFinite(hex));i+=1)uffff=16*uffff+hex;string+=String.fromCharCode(uffff)}else{if(\"string\"!=typeof escapee[ch])break;string+=escapee[ch]}else string+=ch}error(\"Bad string\")},white=function(){for(;ch&&\" \">=ch;)next()},word=function(){switch(ch){case\"t\":return next(\"t\"),next(\"r\"),next(\"u\"),next(\"e\"),!0;case\"f\":return next(\"f\"),next(\"a\"),next(\"l\"),next(\"s\"),next(\"e\"),!1;case\"n\":return next(\"n\"),next(\"u\"),next(\"l\"),next(\"l\"),null}error(\"Unexpected '\"+ch+\"'\")},array=function(){var array=[];if(\"[\"===ch){if(next(\"[\"),white(),\"]\"===ch)return next(\"]\"),array;for(;ch;){if(array.push(value()),white(),\"]\"===ch)return next(\"]\"),array;next(\",\"),white()}}error(\"Bad array\")},object=function(){var key,object={};if(\"{\"===ch){if(next(\"{\"),white(),\"}\"===ch)return next(\"}\"),object;for(;ch;){if(key=string(),white(),next(\":\"),Object.hasOwnProperty.call(object,key)&&error('Duplicate key \"'+key+'\"'),object[key]=value(),white(),\"}\"===ch)return next(\"}\"),object;next(\",\"),white()}}error(\"Bad object\")};return value=function(){switch(white(),ch){case\"{\":return object();case\"[\":return array();case'\"':return string();case\"-\":return number();default:return ch>=\"0\"&&\"9\">=ch?number():word()}},function(source,reviver){var result;return text=source,at=0,ch=\" \",result=value(),white(),ch&&error(\"Syntax error\"),\"function\"==typeof reviver?function walk(holder,key){var k,v,value=holder[key];if(value&&\"object\"==typeof value)for(k in value)Object.hasOwnProperty.call(value,k)&&(v=walk(value,k),void 0!==v?value[k]=v:delete value[k]);return reviver.call(holder,key,value)}({\"\":result},\"\"):result}}),ace.define(\"ace/mode/json_worker\",[\"require\",\"exports\",\"module\",\"ace/lib/oop\",\"ace/worker/mirror\",\"ace/mode/json/json_parse\"],function(acequire,exports){\"use strict\";var oop=acequire(\"../lib/oop\"),Mirror=acequire(\"../worker/mirror\").Mirror,parse=acequire(\"./json/json_parse\"),JsonWorker=exports.JsonWorker=function(sender){Mirror.call(this,sender),this.setTimeout(200)};oop.inherits(JsonWorker,Mirror),function(){this.onUpdate=function(){var value=this.doc.getValue();try{value&&parse(value)}catch(e){var pos=this.doc.indexToPosition(e.at-1);return this.sender.emit(\"error\",{row:pos.row,column:pos.column,text:e.message,type:\"error\"}),void 0}this.sender.emit(\"ok\")}}.call(JsonWorker.prototype)}),ace.define(\"ace/lib/es5-shim\",[\"require\",\"exports\",\"module\"],function(){function Empty(){}function doesDefinePropertyWork(object){try{return Object.defineProperty(object,\"sentinel\",{}),\"sentinel\"in object}catch(exception){}}function toInteger(n){return n=+n,n!==n?n=0:0!==n&&n!==1/0&&n!==-(1/0)&&(n=(n>0||-1)*Math.floor(Math.abs(n))),n}Function.prototype.bind||(Function.prototype.bind=function(that){var target=this;if(\"function\"!=typeof target)throw new TypeError(\"Function.prototype.bind called on incompatible \"+target);var args=slice.call(arguments,1),bound=function(){if(this instanceof bound){var result=target.apply(this,args.concat(slice.call(arguments)));return Object(result)===result?result:this}return target.apply(that,args.concat(slice.call(arguments)))};return target.prototype&&(Empty.prototype=target.prototype,bound.prototype=new Empty,Empty.prototype=null),bound});var defineGetter,defineSetter,lookupGetter,lookupSetter,supportsAccessors,call=Function.prototype.call,prototypeOfArray=Array.prototype,prototypeOfObject=Object.prototype,slice=prototypeOfArray.slice,_toString=call.bind(prototypeOfObject.toString),owns=call.bind(prototypeOfObject.hasOwnProperty);if((supportsAccessors=owns(prototypeOfObject,\"__defineGetter__\"))&&(defineGetter=call.bind(prototypeOfObject.__defineGetter__),defineSetter=call.bind(prototypeOfObject.__defineSetter__),lookupGetter=call.bind(prototypeOfObject.__lookupGetter__),lookupSetter=call.bind(prototypeOfObject.__lookupSetter__)),2!=[1,2].splice(0).length)if(function(){function makeArray(l){var a=Array(l+2);return a[0]=a[1]=0,a}var lengthBefore,array=[];return array.splice.apply(array,makeArray(20)),array.splice.apply(array,makeArray(26)),lengthBefore=array.length,array.splice(5,0,\"XXX\"),lengthBefore+1==array.length,lengthBefore+1==array.length?!0:void 0}()){var array_splice=Array.prototype.splice;Array.prototype.splice=function(start,deleteCount){return arguments.length?array_splice.apply(this,[void 0===start?0:start,void 0===deleteCount?this.length-start:deleteCount].concat(slice.call(arguments,2))):[]}}else Array.prototype.splice=function(pos,removeCount){var length=this.length;pos>0?pos>length&&(pos=length):void 0==pos?pos=0:0>pos&&(pos=Math.max(length+pos,0)),length>pos+removeCount||(removeCount=length-pos);var removed=this.slice(pos,pos+removeCount),insert=slice.call(arguments,2),add=insert.length;if(pos===length)add&&this.push.apply(this,insert);else{var remove=Math.min(removeCount,length-pos),tailOldPos=pos+remove,tailNewPos=tailOldPos+add-remove,tailCount=length-tailOldPos,lengthAfterRemove=length-remove;if(tailOldPos>tailNewPos)for(var i=0;tailCount>i;++i)this[tailNewPos+i]=this[tailOldPos+i];else if(tailNewPos>tailOldPos)for(i=tailCount;i--;)this[tailNewPos+i]=this[tailOldPos+i];if(add&&pos===lengthAfterRemove)this.length=lengthAfterRemove,this.push.apply(this,insert);else for(this.length=lengthAfterRemove+add,i=0;add>i;++i)this[pos+i]=insert[i]}return removed};Array.isArray||(Array.isArray=function(obj){return\"[object Array]\"==_toString(obj)});var boxedString=Object(\"a\"),splitString=\"a\"!=boxedString[0]||!(0 in boxedString);if(Array.prototype.forEach||(Array.prototype.forEach=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,thisp=arguments[1],i=-1,length=self.length>>>0;if(\"[object Function]\"!=_toString(fun))throw new TypeError;\nfor(;length>++i;)i in self&&fun.call(thisp,self[i],i,object)}),Array.prototype.map||(Array.prototype.map=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,result=Array(length),thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)i in self&&(result[i]=fun.call(thisp,self[i],i,object));return result}),Array.prototype.filter||(Array.prototype.filter=function(fun){var value,object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,result=[],thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)i in self&&(value=self[i],fun.call(thisp,value,i,object)&&result.push(value));return result}),Array.prototype.every||(Array.prototype.every=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)if(i in self&&!fun.call(thisp,self[i],i,object))return!1;return!0}),Array.prototype.some||(Array.prototype.some=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)if(i in self&&fun.call(thisp,self[i],i,object))return!0;return!1}),Array.prototype.reduce||(Array.prototype.reduce=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0;if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");if(!length&&1==arguments.length)throw new TypeError(\"reduce of empty array with no initial value\");var result,i=0;if(arguments.length>=2)result=arguments[1];else for(;;){if(i in self){result=self[i++];break}if(++i>=length)throw new TypeError(\"reduce of empty array with no initial value\")}for(;length>i;i++)i in self&&(result=fun.call(void 0,result,self[i],i,object));return result}),Array.prototype.reduceRight||(Array.prototype.reduceRight=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0;if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");if(!length&&1==arguments.length)throw new TypeError(\"reduceRight of empty array with no initial value\");var result,i=length-1;if(arguments.length>=2)result=arguments[1];else for(;;){if(i in self){result=self[i--];break}if(0>--i)throw new TypeError(\"reduceRight of empty array with no initial value\")}do i in this&&(result=fun.call(void 0,result,self[i],i,object));while(i--);return result}),Array.prototype.indexOf&&-1==[0,1].indexOf(1,2)||(Array.prototype.indexOf=function(sought){var self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):toObject(this),length=self.length>>>0;if(!length)return-1;var i=0;for(arguments.length>1&&(i=toInteger(arguments[1])),i=i>=0?i:Math.max(0,length+i);length>i;i++)if(i in self&&self[i]===sought)return i;return-1}),Array.prototype.lastIndexOf&&-1==[0,1].lastIndexOf(0,-3)||(Array.prototype.lastIndexOf=function(sought){var self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):toObject(this),length=self.length>>>0;if(!length)return-1;var i=length-1;for(arguments.length>1&&(i=Math.min(i,toInteger(arguments[1]))),i=i>=0?i:length-Math.abs(i);i>=0;i--)if(i in self&&sought===self[i])return i;return-1}),Object.getPrototypeOf||(Object.getPrototypeOf=function(object){return object.__proto__||(object.constructor?object.constructor.prototype:prototypeOfObject)}),!Object.getOwnPropertyDescriptor){var ERR_NON_OBJECT=\"Object.getOwnPropertyDescriptor called on a non-object: \";Object.getOwnPropertyDescriptor=function(object,property){if(\"object\"!=typeof object&&\"function\"!=typeof object||null===object)throw new TypeError(ERR_NON_OBJECT+object);if(owns(object,property)){var descriptor,getter,setter;if(descriptor={enumerable:!0,configurable:!0},supportsAccessors){var prototype=object.__proto__;object.__proto__=prototypeOfObject;var getter=lookupGetter(object,property),setter=lookupSetter(object,property);if(object.__proto__=prototype,getter||setter)return getter&&(descriptor.get=getter),setter&&(descriptor.set=setter),descriptor}return descriptor.value=object[property],descriptor}}}if(Object.getOwnPropertyNames||(Object.getOwnPropertyNames=function(object){return Object.keys(object)}),!Object.create){var createEmpty;createEmpty=null===Object.prototype.__proto__?function(){return{__proto__:null}}:function(){var empty={};for(var i in empty)empty[i]=null;return empty.constructor=empty.hasOwnProperty=empty.propertyIsEnumerable=empty.isPrototypeOf=empty.toLocaleString=empty.toString=empty.valueOf=empty.__proto__=null,empty},Object.create=function(prototype,properties){var object;if(null===prototype)object=createEmpty();else{if(\"object\"!=typeof prototype)throw new TypeError(\"typeof prototype[\"+typeof prototype+\"] != 'object'\");var Type=function(){};Type.prototype=prototype,object=new Type,object.__proto__=prototype}return void 0!==properties&&Object.defineProperties(object,properties),object}}if(Object.defineProperty){var definePropertyWorksOnObject=doesDefinePropertyWork({}),definePropertyWorksOnDom=\"undefined\"==typeof document||doesDefinePropertyWork(document.createElement(\"div\"));if(!definePropertyWorksOnObject||!definePropertyWorksOnDom)var definePropertyFallback=Object.defineProperty}if(!Object.defineProperty||definePropertyFallback){var ERR_NON_OBJECT_DESCRIPTOR=\"Property description must be an object: \",ERR_NON_OBJECT_TARGET=\"Object.defineProperty called on non-object: \",ERR_ACCESSORS_NOT_SUPPORTED=\"getters & setters can not be defined on this javascript engine\";Object.defineProperty=function(object,property,descriptor){if(\"object\"!=typeof object&&\"function\"!=typeof object||null===object)throw new TypeError(ERR_NON_OBJECT_TARGET+object);if(\"object\"!=typeof descriptor&&\"function\"!=typeof descriptor||null===descriptor)throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR+descriptor);if(definePropertyFallback)try{return definePropertyFallback.call(Object,object,property,descriptor)}catch(exception){}if(owns(descriptor,\"value\"))if(supportsAccessors&&(lookupGetter(object,property)||lookupSetter(object,property))){var prototype=object.__proto__;object.__proto__=prototypeOfObject,delete object[property],object[property]=descriptor.value,object.__proto__=prototype}else object[property]=descriptor.value;else{if(!supportsAccessors)throw new TypeError(ERR_ACCESSORS_NOT_SUPPORTED);owns(descriptor,\"get\")&&defineGetter(object,property,descriptor.get),owns(descriptor,\"set\")&&defineSetter(object,property,descriptor.set)}return object}}Object.defineProperties||(Object.defineProperties=function(object,properties){for(var property in properties)owns(properties,property)&&Object.defineProperty(object,property,properties[property]);return object}),Object.seal||(Object.seal=function(object){return object}),Object.freeze||(Object.freeze=function(object){return object});try{Object.freeze(function(){})}catch(exception){Object.freeze=function(freezeObject){return function(object){return\"function\"==typeof object?object:freezeObject(object)}}(Object.freeze)}if(Object.preventExtensions||(Object.preventExtensions=function(object){return object}),Object.isSealed||(Object.isSealed=function(){return!1}),Object.isFrozen||(Object.isFrozen=function(){return!1}),Object.isExtensible||(Object.isExtensible=function(object){if(Object(object)===object)throw new TypeError;for(var name=\"\";owns(object,name);)name+=\"?\";object[name]=!0;var returnValue=owns(object,name);return delete object[name],returnValue}),!Object.keys){var hasDontEnumBug=!0,dontEnums=[\"toString\",\"toLocaleString\",\"valueOf\",\"hasOwnProperty\",\"isPrototypeOf\",\"propertyIsEnumerable\",\"constructor\"],dontEnumsLength=dontEnums.length;for(var key in{toString:null})hasDontEnumBug=!1;Object.keys=function(object){if(\"object\"!=typeof object&&\"function\"!=typeof object||null===object)throw new TypeError(\"Object.keys called on a non-object\");var keys=[];for(var name in object)owns(object,name)&&keys.push(name);if(hasDontEnumBug)for(var i=0,ii=dontEnumsLength;ii>i;i++){var dontEnum=dontEnums[i];owns(object,dontEnum)&&keys.push(dontEnum)}return keys}}Date.now||(Date.now=function(){return(new Date).getTime()});var ws=\"\t\\n\u000b\\f\\r   ᠎             　\\u2028\\u2029﻿\";if(!String.prototype.trim||ws.trim()){ws=\"[\"+ws+\"]\";var trimBeginRegexp=RegExp(\"^\"+ws+ws+\"*\"),trimEndRegexp=RegExp(ws+ws+\"*$\");String.prototype.trim=function(){return(this+\"\").replace(trimBeginRegexp,\"\").replace(trimEndRegexp,\"\")}}var toObject=function(o){if(null==o)throw new TypeError(\"can't convert \"+o+\" to object\");return Object(o)}});";
+	/* ***** BEGIN LICENSE BLOCK *****
+	 * Distributed under the BSD license:
+	 *
+	 * Copyright (c) 2010, Ajax.org B.V.
+	 * All rights reserved.
+	 * 
+	 * Redistribution and use in source and binary forms, with or without
+	 * modification, are permitted provided that the following conditions are met:
+	 *     * Redistributions of source code must retain the above copyright
+	 *       notice, this list of conditions and the following disclaimer.
+	 *     * Redistributions in binary form must reproduce the above copyright
+	 *       notice, this list of conditions and the following disclaimer in the
+	 *       documentation and/or other materials provided with the distribution.
+	 *     * Neither the name of Ajax.org B.V. nor the
+	 *       names of its contributors may be used to endorse or promote products
+	 *       derived from this software without specific prior written permission.
+	 * 
+	 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+	 * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+	 * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+	 * DISCLAIMED. IN NO EVENT SHALL AJAX.ORG B.V. BE LIABLE FOR ANY
+	 * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+	 * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+	 * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+	 * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+	 * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+	 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+	 *
+	 * ***** END LICENSE BLOCK ***** */
+
+	ace.define('ace/theme/jsoneditor', ['require', 'exports', 'module', 'ace/lib/dom'], function(acequire, exports, module) {
+
+	exports.isDark = false;
+	exports.cssClass = "ace-jsoneditor";
+	exports.cssText = ".ace-jsoneditor .ace_gutter {\
+	background: #ebebeb;\
+	color: #333\
+	}\
+	\
+	.ace-jsoneditor.ace_editor {\
+	font-family: droid sans mono, monospace, courier new, courier, sans-serif;\
+	line-height: 1.3;\
+	}\
+	.ace-jsoneditor .ace_print-margin {\
+	width: 1px;\
+	background: #e8e8e8\
+	}\
+	.ace-jsoneditor .ace_scroller {\
+	background-color: #FFFFFF\
+	}\
+	.ace-jsoneditor .ace_text-layer {\
+	color: gray\
+	}\
+	.ace-jsoneditor .ace_variable {\
+	color: #1a1a1a\
+	}\
+	.ace-jsoneditor .ace_cursor {\
+	border-left: 2px solid #000000\
+	}\
+	.ace-jsoneditor .ace_overwrite-cursors .ace_cursor {\
+	border-left: 0px;\
+	border-bottom: 1px solid #000000\
+	}\
+	.ace-jsoneditor .ace_marker-layer .ace_selection {\
+	background: #D5DDF6\
+	}\
+	.ace-jsoneditor.ace_multiselect .ace_selection.ace_start {\
+	box-shadow: 0 0 3px 0px #FFFFFF;\
+	border-radius: 2px\
+	}\
+	.ace-jsoneditor .ace_marker-layer .ace_step {\
+	background: rgb(255, 255, 0)\
+	}\
+	.ace-jsoneditor .ace_marker-layer .ace_bracket {\
+	margin: -1px 0 0 -1px;\
+	border: 1px solid #BFBFBF\
+	}\
+	.ace-jsoneditor .ace_marker-layer .ace_active-line {\
+	background: #FFFBD1\
+	}\
+	.ace-jsoneditor .ace_gutter-active-line {\
+	background-color : #dcdcdc\
+	}\
+	.ace-jsoneditor .ace_marker-layer .ace_selected-word {\
+	border: 1px solid #D5DDF6\
+	}\
+	.ace-jsoneditor .ace_invisible {\
+	color: #BFBFBF\
+	}\
+	.ace-jsoneditor .ace_keyword,\
+	.ace-jsoneditor .ace_meta,\
+	.ace-jsoneditor .ace_support.ace_constant.ace_property-value {\
+	color: #AF956F\
+	}\
+	.ace-jsoneditor .ace_keyword.ace_operator {\
+	color: #484848\
+	}\
+	.ace-jsoneditor .ace_keyword.ace_other.ace_unit {\
+	color: #96DC5F\
+	}\
+	.ace-jsoneditor .ace_constant.ace_language {\
+	color: darkorange\
+	}\
+	.ace-jsoneditor .ace_constant.ace_numeric {\
+	color: red\
+	}\
+	.ace-jsoneditor .ace_constant.ace_character.ace_entity {\
+	color: #BF78CC\
+	}\
+	.ace-jsoneditor .ace_invalid {\
+	color: #FFFFFF;\
+	background-color: #FF002A;\
+	}\
+	.ace-jsoneditor .ace_fold {\
+	background-color: #AF956F;\
+	border-color: #000000\
+	}\
+	.ace-jsoneditor .ace_storage,\
+	.ace-jsoneditor .ace_support.ace_class,\
+	.ace-jsoneditor .ace_support.ace_function,\
+	.ace-jsoneditor .ace_support.ace_other,\
+	.ace-jsoneditor .ace_support.ace_type {\
+	color: #C52727\
+	}\
+	.ace-jsoneditor .ace_string {\
+	color: green\
+	}\
+	.ace-jsoneditor .ace_comment {\
+	color: #BCC8BA\
+	}\
+	.ace-jsoneditor .ace_entity.ace_name.ace_tag,\
+	.ace-jsoneditor .ace_entity.ace_other.ace_attribute-name {\
+	color: #606060\
+	}\
+	.ace-jsoneditor .ace_markup.ace_underline {\
+	text-decoration: underline\
+	}\
+	.ace-jsoneditor .ace_indent-guide {\
+	background: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAE0lEQVQImWP4////f4bLly//BwAmVgd1/w11/gAAAABJRU5ErkJggg==\") right repeat-y\
+	}";
+
+	var dom = acequire("../lib/dom");
+	dom.importCssString(exports.cssText, exports.cssClass);
+	});
+
 
 /***/ },
-/* 18 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function() { throw new Error("define cannot be used indirect"); };
 
 
 /***/ },
-/* 19 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {module.exports = get_blob()
@@ -26293,6 +25952,436 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports.id = 'ace/mode/json_worker';
+	module.exports.src = "\"no use strict\";(function(window){if(void 0===window.window||!window.document){window.console=function(){var msgs=Array.prototype.slice.call(arguments,0);postMessage({type:\"log\",data:msgs})},window.console.error=window.console.warn=window.console.log=window.console.trace=window.console,window.window=window,window.ace=window,window.onerror=function(message,file,line,col,err){postMessage({type:\"error\",data:{message:message,file:file,line:line,col:col,stack:err.stack}})},window.normalizeModule=function(parentId,moduleName){if(-1!==moduleName.indexOf(\"!\")){var chunks=moduleName.split(\"!\");return window.normalizeModule(parentId,chunks[0])+\"!\"+window.normalizeModule(parentId,chunks[1])}if(\".\"==moduleName.charAt(0)){var base=parentId.split(\"/\").slice(0,-1).join(\"/\");for(moduleName=(base?base+\"/\":\"\")+moduleName;-1!==moduleName.indexOf(\".\")&&previous!=moduleName;){var previous=moduleName;moduleName=moduleName.replace(/^\\.\\//,\"\").replace(/\\/\\.\\//,\"/\").replace(/[^\\/]+\\/\\.\\.\\//,\"\")}}return moduleName},window.acequire=function(parentId,id){if(id||(id=parentId,parentId=null),!id.charAt)throw Error(\"worker.js acequire() accepts only (parentId, id) as arguments\");id=window.normalizeModule(parentId,id);var module=window.acequire.modules[id];if(module)return module.initialized||(module.initialized=!0,module.exports=module.factory().exports),module.exports;var chunks=id.split(\"/\");if(!window.acequire.tlns)return console.log(\"unable to load \"+id);chunks[0]=window.acequire.tlns[chunks[0]]||chunks[0];var path=chunks.join(\"/\")+\".js\";return window.acequire.id=id,importScripts(path),window.acequire(parentId,id)},window.acequire.modules={},window.acequire.tlns={},window.define=function(id,deps,factory){if(2==arguments.length?(factory=deps,\"string\"!=typeof id&&(deps=id,id=window.acequire.id)):1==arguments.length&&(factory=id,deps=[],id=window.acequire.id),\"function\"!=typeof factory)return window.acequire.modules[id]={exports:factory,initialized:!0},void 0;deps.length||(deps=[\"require\",\"exports\",\"module\"]);var req=function(childId){return window.acequire(id,childId)};window.acequire.modules[id]={exports:{},factory:function(){var module=this,returnExports=factory.apply(this,deps.map(function(dep){switch(dep){case\"require\":return req;case\"exports\":return module.exports;case\"module\":return module;default:return req(dep)}}));return returnExports&&(module.exports=returnExports),module}}},window.define.amd={},window.initBaseUrls=function initBaseUrls(topLevelNamespaces){acequire.tlns=topLevelNamespaces},window.initSender=function initSender(){var EventEmitter=window.acequire(\"ace/lib/event_emitter\").EventEmitter,oop=window.acequire(\"ace/lib/oop\"),Sender=function(){};return function(){oop.implement(this,EventEmitter),this.callback=function(data,callbackId){postMessage({type:\"call\",id:callbackId,data:data})},this.emit=function(name,data){postMessage({type:\"event\",name:name,data:data})}}.call(Sender.prototype),new Sender};var main=window.main=null,sender=window.sender=null;window.onmessage=function(e){var msg=e.data;if(msg.command){if(!main[msg.command])throw Error(\"Unknown command:\"+msg.command);main[msg.command].apply(main,msg.args)}else if(msg.init){initBaseUrls(msg.tlns),acequire(\"ace/lib/es5-shim\"),sender=window.sender=initSender();var clazz=acequire(msg.module)[msg.classname];main=window.main=new clazz(sender)}else msg.event&&sender&&sender._signal(msg.event,msg.data)}}})(this),ace.define(\"ace/lib/oop\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";exports.inherits=function(ctor,superCtor){ctor.super_=superCtor,ctor.prototype=Object.create(superCtor.prototype,{constructor:{value:ctor,enumerable:!1,writable:!0,configurable:!0}})},exports.mixin=function(obj,mixin){for(var key in mixin)obj[key]=mixin[key];return obj},exports.implement=function(proto,mixin){exports.mixin(proto,mixin)}}),ace.define(\"ace/lib/event_emitter\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";var EventEmitter={},stopPropagation=function(){this.propagationStopped=!0},preventDefault=function(){this.defaultPrevented=!0};EventEmitter._emit=EventEmitter._dispatchEvent=function(eventName,e){this._eventRegistry||(this._eventRegistry={}),this._defaultHandlers||(this._defaultHandlers={});var listeners=this._eventRegistry[eventName]||[],defaultHandler=this._defaultHandlers[eventName];if(listeners.length||defaultHandler){\"object\"==typeof e&&e||(e={}),e.type||(e.type=eventName),e.stopPropagation||(e.stopPropagation=stopPropagation),e.preventDefault||(e.preventDefault=preventDefault),listeners=listeners.slice();for(var i=0;listeners.length>i&&(listeners[i](e,this),!e.propagationStopped);i++);return defaultHandler&&!e.defaultPrevented?defaultHandler(e,this):void 0}},EventEmitter._signal=function(eventName,e){var listeners=(this._eventRegistry||{})[eventName];if(listeners){listeners=listeners.slice();for(var i=0;listeners.length>i;i++)listeners[i](e,this)}},EventEmitter.once=function(eventName,callback){var _self=this;callback&&this.addEventListener(eventName,function newCallback(){_self.removeEventListener(eventName,newCallback),callback.apply(null,arguments)})},EventEmitter.setDefaultHandler=function(eventName,callback){var handlers=this._defaultHandlers;if(handlers||(handlers=this._defaultHandlers={_disabled_:{}}),handlers[eventName]){var old=handlers[eventName],disabled=handlers._disabled_[eventName];disabled||(handlers._disabled_[eventName]=disabled=[]),disabled.push(old);var i=disabled.indexOf(callback);-1!=i&&disabled.splice(i,1)}handlers[eventName]=callback},EventEmitter.removeDefaultHandler=function(eventName,callback){var handlers=this._defaultHandlers;if(handlers){var disabled=handlers._disabled_[eventName];if(handlers[eventName]==callback)handlers[eventName],disabled&&this.setDefaultHandler(eventName,disabled.pop());else if(disabled){var i=disabled.indexOf(callback);-1!=i&&disabled.splice(i,1)}}},EventEmitter.on=EventEmitter.addEventListener=function(eventName,callback,capturing){this._eventRegistry=this._eventRegistry||{};var listeners=this._eventRegistry[eventName];return listeners||(listeners=this._eventRegistry[eventName]=[]),-1==listeners.indexOf(callback)&&listeners[capturing?\"unshift\":\"push\"](callback),callback},EventEmitter.off=EventEmitter.removeListener=EventEmitter.removeEventListener=function(eventName,callback){this._eventRegistry=this._eventRegistry||{};var listeners=this._eventRegistry[eventName];if(listeners){var index=listeners.indexOf(callback);-1!==index&&listeners.splice(index,1)}},EventEmitter.removeAllListeners=function(eventName){this._eventRegistry&&(this._eventRegistry[eventName]=[])},exports.EventEmitter=EventEmitter}),ace.define(\"ace/range\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";var comparePoints=function(p1,p2){return p1.row-p2.row||p1.column-p2.column},Range=function(startRow,startColumn,endRow,endColumn){this.start={row:startRow,column:startColumn},this.end={row:endRow,column:endColumn}};(function(){this.isEqual=function(range){return this.start.row===range.start.row&&this.end.row===range.end.row&&this.start.column===range.start.column&&this.end.column===range.end.column},this.toString=function(){return\"Range: [\"+this.start.row+\"/\"+this.start.column+\"] -> [\"+this.end.row+\"/\"+this.end.column+\"]\"},this.contains=function(row,column){return 0==this.compare(row,column)},this.compareRange=function(range){var cmp,end=range.end,start=range.start;return cmp=this.compare(end.row,end.column),1==cmp?(cmp=this.compare(start.row,start.column),1==cmp?2:0==cmp?1:0):-1==cmp?-2:(cmp=this.compare(start.row,start.column),-1==cmp?-1:1==cmp?42:0)},this.comparePoint=function(p){return this.compare(p.row,p.column)},this.containsRange=function(range){return 0==this.comparePoint(range.start)&&0==this.comparePoint(range.end)},this.intersects=function(range){var cmp=this.compareRange(range);return-1==cmp||0==cmp||1==cmp},this.isEnd=function(row,column){return this.end.row==row&&this.end.column==column},this.isStart=function(row,column){return this.start.row==row&&this.start.column==column},this.setStart=function(row,column){\"object\"==typeof row?(this.start.column=row.column,this.start.row=row.row):(this.start.row=row,this.start.column=column)},this.setEnd=function(row,column){\"object\"==typeof row?(this.end.column=row.column,this.end.row=row.row):(this.end.row=row,this.end.column=column)},this.inside=function(row,column){return 0==this.compare(row,column)?this.isEnd(row,column)||this.isStart(row,column)?!1:!0:!1},this.insideStart=function(row,column){return 0==this.compare(row,column)?this.isEnd(row,column)?!1:!0:!1},this.insideEnd=function(row,column){return 0==this.compare(row,column)?this.isStart(row,column)?!1:!0:!1},this.compare=function(row,column){return this.isMultiLine()||row!==this.start.row?this.start.row>row?-1:row>this.end.row?1:this.start.row===row?column>=this.start.column?0:-1:this.end.row===row?this.end.column>=column?0:1:0:this.start.column>column?-1:column>this.end.column?1:0},this.compareStart=function(row,column){return this.start.row==row&&this.start.column==column?-1:this.compare(row,column)},this.compareEnd=function(row,column){return this.end.row==row&&this.end.column==column?1:this.compare(row,column)},this.compareInside=function(row,column){return this.end.row==row&&this.end.column==column?1:this.start.row==row&&this.start.column==column?-1:this.compare(row,column)},this.clipRows=function(firstRow,lastRow){if(this.end.row>lastRow)var end={row:lastRow+1,column:0};else if(firstRow>this.end.row)var end={row:firstRow,column:0};if(this.start.row>lastRow)var start={row:lastRow+1,column:0};else if(firstRow>this.start.row)var start={row:firstRow,column:0};return Range.fromPoints(start||this.start,end||this.end)},this.extend=function(row,column){var cmp=this.compare(row,column);if(0==cmp)return this;if(-1==cmp)var start={row:row,column:column};else var end={row:row,column:column};return Range.fromPoints(start||this.start,end||this.end)},this.isEmpty=function(){return this.start.row===this.end.row&&this.start.column===this.end.column},this.isMultiLine=function(){return this.start.row!==this.end.row},this.clone=function(){return Range.fromPoints(this.start,this.end)},this.collapseRows=function(){return 0==this.end.column?new Range(this.start.row,0,Math.max(this.start.row,this.end.row-1),0):new Range(this.start.row,0,this.end.row,0)},this.toScreenRange=function(session){var screenPosStart=session.documentToScreenPosition(this.start),screenPosEnd=session.documentToScreenPosition(this.end);return new Range(screenPosStart.row,screenPosStart.column,screenPosEnd.row,screenPosEnd.column)},this.moveBy=function(row,column){this.start.row+=row,this.start.column+=column,this.end.row+=row,this.end.column+=column}}).call(Range.prototype),Range.fromPoints=function(start,end){return new Range(start.row,start.column,end.row,end.column)},Range.comparePoints=comparePoints,Range.comparePoints=function(p1,p2){return p1.row-p2.row||p1.column-p2.column},exports.Range=Range}),ace.define(\"ace/anchor\",[\"require\",\"exports\",\"module\",\"ace/lib/oop\",\"ace/lib/event_emitter\"],function(acequire,exports){\"use strict\";var oop=acequire(\"./lib/oop\"),EventEmitter=acequire(\"./lib/event_emitter\").EventEmitter,Anchor=exports.Anchor=function(doc,row,column){this.$onChange=this.onChange.bind(this),this.attach(doc),column===void 0?this.setPosition(row.row,row.column):this.setPosition(row,column)};(function(){oop.implement(this,EventEmitter),this.getPosition=function(){return this.$clipPositionToDocument(this.row,this.column)},this.getDocument=function(){return this.document},this.$insertRight=!1,this.onChange=function(e){var delta=e.data,range=delta.range;if(!(range.start.row==range.end.row&&range.start.row!=this.row||range.start.row>this.row||range.start.row==this.row&&range.start.column>this.column)){var row=this.row,column=this.column,start=range.start,end=range.end;\"insertText\"===delta.action?start.row===row&&column>=start.column?start.column===column&&this.$insertRight||(start.row===end.row?column+=end.column-start.column:(column-=start.column,row+=end.row-start.row)):start.row!==end.row&&row>start.row&&(row+=end.row-start.row):\"insertLines\"===delta.action?start.row===row&&0===column&&this.$insertRight||row>=start.row&&(row+=end.row-start.row):\"removeText\"===delta.action?start.row===row&&column>start.column?column=end.column>=column?start.column:Math.max(0,column-(end.column-start.column)):start.row!==end.row&&row>start.row?(end.row===row&&(column=Math.max(0,column-end.column)+start.column),row-=end.row-start.row):end.row===row&&(row-=end.row-start.row,column=Math.max(0,column-end.column)+start.column):\"removeLines\"==delta.action&&row>=start.row&&(row>=end.row?row-=end.row-start.row:(row=start.row,column=0)),this.setPosition(row,column,!0)}},this.setPosition=function(row,column,noClip){var pos;if(pos=noClip?{row:row,column:column}:this.$clipPositionToDocument(row,column),this.row!=pos.row||this.column!=pos.column){var old={row:this.row,column:this.column};this.row=pos.row,this.column=pos.column,this._signal(\"change\",{old:old,value:pos})}},this.detach=function(){this.document.removeEventListener(\"change\",this.$onChange)},this.attach=function(doc){this.document=doc||this.document,this.document.on(\"change\",this.$onChange)},this.$clipPositionToDocument=function(row,column){var pos={};return row>=this.document.getLength()?(pos.row=Math.max(0,this.document.getLength()-1),pos.column=this.document.getLine(pos.row).length):0>row?(pos.row=0,pos.column=0):(pos.row=row,pos.column=Math.min(this.document.getLine(pos.row).length,Math.max(0,column))),0>column&&(pos.column=0),pos}}).call(Anchor.prototype)}),ace.define(\"ace/document\",[\"require\",\"exports\",\"module\",\"ace/lib/oop\",\"ace/lib/event_emitter\",\"ace/range\",\"ace/anchor\"],function(acequire,exports){\"use strict\";var oop=acequire(\"./lib/oop\"),EventEmitter=acequire(\"./lib/event_emitter\").EventEmitter,Range=acequire(\"./range\").Range,Anchor=acequire(\"./anchor\").Anchor,Document=function(text){this.$lines=[],0===text.length?this.$lines=[\"\"]:Array.isArray(text)?this._insertLines(0,text):this.insert({row:0,column:0},text)};(function(){oop.implement(this,EventEmitter),this.setValue=function(text){var len=this.getLength();this.remove(new Range(0,0,len,this.getLine(len-1).length)),this.insert({row:0,column:0},text)},this.getValue=function(){return this.getAllLines().join(this.getNewLineCharacter())},this.createAnchor=function(row,column){return new Anchor(this,row,column)},this.$split=0===\"aaa\".split(/a/).length?function(text){return text.replace(/\\r\\n|\\r/g,\"\\n\").split(\"\\n\")}:function(text){return text.split(/\\r\\n|\\r|\\n/)},this.$detectNewLine=function(text){var match=text.match(/^.*?(\\r\\n|\\r|\\n)/m);this.$autoNewLine=match?match[1]:\"\\n\",this._signal(\"changeNewLineMode\")},this.getNewLineCharacter=function(){switch(this.$newLineMode){case\"windows\":return\"\\r\\n\";case\"unix\":return\"\\n\";default:return this.$autoNewLine||\"\\n\"}},this.$autoNewLine=\"\",this.$newLineMode=\"auto\",this.setNewLineMode=function(newLineMode){this.$newLineMode!==newLineMode&&(this.$newLineMode=newLineMode,this._signal(\"changeNewLineMode\"))},this.getNewLineMode=function(){return this.$newLineMode},this.isNewLine=function(text){return\"\\r\\n\"==text||\"\\r\"==text||\"\\n\"==text},this.getLine=function(row){return this.$lines[row]||\"\"},this.getLines=function(firstRow,lastRow){return this.$lines.slice(firstRow,lastRow+1)},this.getAllLines=function(){return this.getLines(0,this.getLength())},this.getLength=function(){return this.$lines.length},this.getTextRange=function(range){if(range.start.row==range.end.row)return this.getLine(range.start.row).substring(range.start.column,range.end.column);var lines=this.getLines(range.start.row,range.end.row);lines[0]=(lines[0]||\"\").substring(range.start.column);var l=lines.length-1;return range.end.row-range.start.row==l&&(lines[l]=lines[l].substring(0,range.end.column)),lines.join(this.getNewLineCharacter())},this.$clipPosition=function(position){var length=this.getLength();return position.row>=length?(position.row=Math.max(0,length-1),position.column=this.getLine(length-1).length):0>position.row&&(position.row=0),position},this.insert=function(position,text){if(!text||0===text.length)return position;position=this.$clipPosition(position),1>=this.getLength()&&this.$detectNewLine(text);var lines=this.$split(text),firstLine=lines.splice(0,1)[0],lastLine=0==lines.length?null:lines.splice(lines.length-1,1)[0];return position=this.insertInLine(position,firstLine),null!==lastLine&&(position=this.insertNewLine(position),position=this._insertLines(position.row,lines),position=this.insertInLine(position,lastLine||\"\")),position},this.insertLines=function(row,lines){return row>=this.getLength()?this.insert({row:row,column:0},\"\\n\"+lines.join(\"\\n\")):this._insertLines(Math.max(row,0),lines)},this._insertLines=function(row,lines){if(0==lines.length)return{row:row,column:0};for(;lines.length>61440;){var end=this._insertLines(row,lines.slice(0,61440));lines=lines.slice(61440),row=end.row}var args=[row,0];args.push.apply(args,lines),this.$lines.splice.apply(this.$lines,args);var range=new Range(row,0,row+lines.length,0),delta={action:\"insertLines\",range:range,lines:lines};return this._signal(\"change\",{data:delta}),range.end},this.insertNewLine=function(position){position=this.$clipPosition(position);var line=this.$lines[position.row]||\"\";this.$lines[position.row]=line.substring(0,position.column),this.$lines.splice(position.row+1,0,line.substring(position.column,line.length));var end={row:position.row+1,column:0},delta={action:\"insertText\",range:Range.fromPoints(position,end),text:this.getNewLineCharacter()};return this._signal(\"change\",{data:delta}),end},this.insertInLine=function(position,text){if(0==text.length)return position;var line=this.$lines[position.row]||\"\";this.$lines[position.row]=line.substring(0,position.column)+text+line.substring(position.column);var end={row:position.row,column:position.column+text.length},delta={action:\"insertText\",range:Range.fromPoints(position,end),text:text};return this._signal(\"change\",{data:delta}),end},this.remove=function(range){if(range instanceof Range||(range=Range.fromPoints(range.start,range.end)),range.start=this.$clipPosition(range.start),range.end=this.$clipPosition(range.end),range.isEmpty())return range.start;var firstRow=range.start.row,lastRow=range.end.row;if(range.isMultiLine()){var firstFullRow=0==range.start.column?firstRow:firstRow+1,lastFullRow=lastRow-1;range.end.column>0&&this.removeInLine(lastRow,0,range.end.column),lastFullRow>=firstFullRow&&this._removeLines(firstFullRow,lastFullRow),firstFullRow!=firstRow&&(this.removeInLine(firstRow,range.start.column,this.getLine(firstRow).length),this.removeNewLine(range.start.row))}else this.removeInLine(firstRow,range.start.column,range.end.column);return range.start},this.removeInLine=function(row,startColumn,endColumn){if(startColumn!=endColumn){var range=new Range(row,startColumn,row,endColumn),line=this.getLine(row),removed=line.substring(startColumn,endColumn),newLine=line.substring(0,startColumn)+line.substring(endColumn,line.length);this.$lines.splice(row,1,newLine);var delta={action:\"removeText\",range:range,text:removed};return this._signal(\"change\",{data:delta}),range.start}},this.removeLines=function(firstRow,lastRow){return 0>firstRow||lastRow>=this.getLength()?this.remove(new Range(firstRow,0,lastRow+1,0)):this._removeLines(firstRow,lastRow)},this._removeLines=function(firstRow,lastRow){var range=new Range(firstRow,0,lastRow+1,0),removed=this.$lines.splice(firstRow,lastRow-firstRow+1),delta={action:\"removeLines\",range:range,nl:this.getNewLineCharacter(),lines:removed};return this._signal(\"change\",{data:delta}),removed},this.removeNewLine=function(row){var firstLine=this.getLine(row),secondLine=this.getLine(row+1),range=new Range(row,firstLine.length,row+1,0),line=firstLine+secondLine;this.$lines.splice(row,2,line);var delta={action:\"removeText\",range:range,text:this.getNewLineCharacter()};this._signal(\"change\",{data:delta})},this.replace=function(range,text){if(range instanceof Range||(range=Range.fromPoints(range.start,range.end)),0==text.length&&range.isEmpty())return range.start;if(text==this.getTextRange(range))return range.end;if(this.remove(range),text)var end=this.insert(range.start,text);else end=range.start;return end},this.applyDeltas=function(deltas){for(var i=0;deltas.length>i;i++){var delta=deltas[i],range=Range.fromPoints(delta.range.start,delta.range.end);\"insertLines\"==delta.action?this.insertLines(range.start.row,delta.lines):\"insertText\"==delta.action?this.insert(range.start,delta.text):\"removeLines\"==delta.action?this._removeLines(range.start.row,range.end.row-1):\"removeText\"==delta.action&&this.remove(range)}},this.revertDeltas=function(deltas){for(var i=deltas.length-1;i>=0;i--){var delta=deltas[i],range=Range.fromPoints(delta.range.start,delta.range.end);\"insertLines\"==delta.action?this._removeLines(range.start.row,range.end.row-1):\"insertText\"==delta.action?this.remove(range):\"removeLines\"==delta.action?this._insertLines(range.start.row,delta.lines):\"removeText\"==delta.action&&this.insert(range.start,delta.text)}},this.indexToPosition=function(index,startRow){for(var lines=this.$lines||this.getAllLines(),newlineLength=this.getNewLineCharacter().length,i=startRow||0,l=lines.length;l>i;i++)if(index-=lines[i].length+newlineLength,0>index)return{row:i,column:index+lines[i].length+newlineLength};return{row:l-1,column:lines[l-1].length}},this.positionToIndex=function(pos,startRow){for(var lines=this.$lines||this.getAllLines(),newlineLength=this.getNewLineCharacter().length,index=0,row=Math.min(pos.row,lines.length),i=startRow||0;row>i;++i)index+=lines[i].length+newlineLength;return index+pos.column}}).call(Document.prototype),exports.Document=Document}),ace.define(\"ace/lib/lang\",[\"require\",\"exports\",\"module\"],function(acequire,exports){\"use strict\";exports.last=function(a){return a[a.length-1]},exports.stringReverse=function(string){return string.split(\"\").reverse().join(\"\")},exports.stringRepeat=function(string,count){for(var result=\"\";count>0;)1&count&&(result+=string),(count>>=1)&&(string+=string);return result};var trimBeginRegexp=/^\\s\\s*/,trimEndRegexp=/\\s\\s*$/;exports.stringTrimLeft=function(string){return string.replace(trimBeginRegexp,\"\")},exports.stringTrimRight=function(string){return string.replace(trimEndRegexp,\"\")},exports.copyObject=function(obj){var copy={};for(var key in obj)copy[key]=obj[key];return copy},exports.copyArray=function(array){for(var copy=[],i=0,l=array.length;l>i;i++)copy[i]=array[i]&&\"object\"==typeof array[i]?this.copyObject(array[i]):array[i];return copy},exports.deepCopy=function(obj){if(\"object\"!=typeof obj||!obj)return obj;var cons=obj.constructor;if(cons===RegExp)return obj;var copy=cons();for(var key in obj)copy[key]=\"object\"==typeof obj[key]?exports.deepCopy(obj[key]):obj[key];return copy},exports.arrayToMap=function(arr){for(var map={},i=0;arr.length>i;i++)map[arr[i]]=1;return map},exports.createMap=function(props){var map=Object.create(null);for(var i in props)map[i]=props[i];return map},exports.arrayRemove=function(array,value){for(var i=0;array.length>=i;i++)value===array[i]&&array.splice(i,1)},exports.escapeRegExp=function(str){return str.replace(/([.*+?^${}()|[\\]\\/\\\\])/g,\"\\\\$1\")},exports.escapeHTML=function(str){return str.replace(/&/g,\"&#38;\").replace(/\"/g,\"&#34;\").replace(/'/g,\"&#39;\").replace(/</g,\"&#60;\")},exports.getMatchOffsets=function(string,regExp){var matches=[];return string.replace(regExp,function(str){matches.push({offset:arguments[arguments.length-2],length:str.length})}),matches},exports.deferredCall=function(fcn){var timer=null,callback=function(){timer=null,fcn()},deferred=function(timeout){return deferred.cancel(),timer=setTimeout(callback,timeout||0),deferred};return deferred.schedule=deferred,deferred.call=function(){return this.cancel(),fcn(),deferred},deferred.cancel=function(){return clearTimeout(timer),timer=null,deferred},deferred.isPending=function(){return timer},deferred},exports.delayedCall=function(fcn,defaultTimeout){var timer=null,callback=function(){timer=null,fcn()},_self=function(timeout){null==timer&&(timer=setTimeout(callback,timeout||defaultTimeout))};return _self.delay=function(timeout){timer&&clearTimeout(timer),timer=setTimeout(callback,timeout||defaultTimeout)},_self.schedule=_self,_self.call=function(){this.cancel(),fcn()},_self.cancel=function(){timer&&clearTimeout(timer),timer=null},_self.isPending=function(){return timer},_self}}),ace.define(\"ace/worker/mirror\",[\"require\",\"exports\",\"module\",\"ace/document\",\"ace/lib/lang\"],function(acequire,exports){\"use strict\";var Document=acequire(\"../document\").Document,lang=acequire(\"../lib/lang\"),Mirror=exports.Mirror=function(sender){this.sender=sender;var doc=this.doc=new Document(\"\"),deferredUpdate=this.deferredUpdate=lang.delayedCall(this.onUpdate.bind(this)),_self=this;sender.on(\"change\",function(e){return doc.applyDeltas(e.data),_self.$timeout?deferredUpdate.schedule(_self.$timeout):(_self.onUpdate(),void 0)})};(function(){this.$timeout=500,this.setTimeout=function(timeout){this.$timeout=timeout},this.setValue=function(value){this.doc.setValue(value),this.deferredUpdate.schedule(this.$timeout)},this.getValue=function(callbackId){this.sender.callback(this.doc.getValue(),callbackId)},this.onUpdate=function(){},this.isPending=function(){return this.deferredUpdate.isPending()}}).call(Mirror.prototype)}),ace.define(\"ace/mode/json/json_parse\",[\"require\",\"exports\",\"module\"],function(){\"use strict\";var at,ch,text,value,escapee={'\"':'\"',\"\\\\\":\"\\\\\",\"/\":\"/\",b:\"\\b\",f:\"\\f\",n:\"\\n\",r:\"\\r\",t:\"\t\"},error=function(m){throw{name:\"SyntaxError\",message:m,at:at,text:text}},next=function(c){return c&&c!==ch&&error(\"Expected '\"+c+\"' instead of '\"+ch+\"'\"),ch=text.charAt(at),at+=1,ch},number=function(){var number,string=\"\";for(\"-\"===ch&&(string=\"-\",next(\"-\"));ch>=\"0\"&&\"9\">=ch;)string+=ch,next();if(\".\"===ch)for(string+=\".\";next()&&ch>=\"0\"&&\"9\">=ch;)string+=ch;if(\"e\"===ch||\"E\"===ch)for(string+=ch,next(),(\"-\"===ch||\"+\"===ch)&&(string+=ch,next());ch>=\"0\"&&\"9\">=ch;)string+=ch,next();return number=+string,isNaN(number)?(error(\"Bad number\"),void 0):number},string=function(){var hex,i,uffff,string=\"\";if('\"'===ch)for(;next();){if('\"'===ch)return next(),string;if(\"\\\\\"===ch)if(next(),\"u\"===ch){for(uffff=0,i=0;4>i&&(hex=parseInt(next(),16),isFinite(hex));i+=1)uffff=16*uffff+hex;string+=String.fromCharCode(uffff)}else{if(\"string\"!=typeof escapee[ch])break;string+=escapee[ch]}else string+=ch}error(\"Bad string\")},white=function(){for(;ch&&\" \">=ch;)next()},word=function(){switch(ch){case\"t\":return next(\"t\"),next(\"r\"),next(\"u\"),next(\"e\"),!0;case\"f\":return next(\"f\"),next(\"a\"),next(\"l\"),next(\"s\"),next(\"e\"),!1;case\"n\":return next(\"n\"),next(\"u\"),next(\"l\"),next(\"l\"),null}error(\"Unexpected '\"+ch+\"'\")},array=function(){var array=[];if(\"[\"===ch){if(next(\"[\"),white(),\"]\"===ch)return next(\"]\"),array;for(;ch;){if(array.push(value()),white(),\"]\"===ch)return next(\"]\"),array;next(\",\"),white()}}error(\"Bad array\")},object=function(){var key,object={};if(\"{\"===ch){if(next(\"{\"),white(),\"}\"===ch)return next(\"}\"),object;for(;ch;){if(key=string(),white(),next(\":\"),Object.hasOwnProperty.call(object,key)&&error('Duplicate key \"'+key+'\"'),object[key]=value(),white(),\"}\"===ch)return next(\"}\"),object;next(\",\"),white()}}error(\"Bad object\")};return value=function(){switch(white(),ch){case\"{\":return object();case\"[\":return array();case'\"':return string();case\"-\":return number();default:return ch>=\"0\"&&\"9\">=ch?number():word()}},function(source,reviver){var result;return text=source,at=0,ch=\" \",result=value(),white(),ch&&error(\"Syntax error\"),\"function\"==typeof reviver?function walk(holder,key){var k,v,value=holder[key];if(value&&\"object\"==typeof value)for(k in value)Object.hasOwnProperty.call(value,k)&&(v=walk(value,k),void 0!==v?value[k]=v:delete value[k]);return reviver.call(holder,key,value)}({\"\":result},\"\"):result}}),ace.define(\"ace/mode/json_worker\",[\"require\",\"exports\",\"module\",\"ace/lib/oop\",\"ace/worker/mirror\",\"ace/mode/json/json_parse\"],function(acequire,exports){\"use strict\";var oop=acequire(\"../lib/oop\"),Mirror=acequire(\"../worker/mirror\").Mirror,parse=acequire(\"./json/json_parse\"),JsonWorker=exports.JsonWorker=function(sender){Mirror.call(this,sender),this.setTimeout(200)};oop.inherits(JsonWorker,Mirror),function(){this.onUpdate=function(){var value=this.doc.getValue();try{value&&parse(value)}catch(e){var pos=this.doc.indexToPosition(e.at-1);return this.sender.emit(\"error\",{row:pos.row,column:pos.column,text:e.message,type:\"error\"}),void 0}this.sender.emit(\"ok\")}}.call(JsonWorker.prototype)}),ace.define(\"ace/lib/es5-shim\",[\"require\",\"exports\",\"module\"],function(){function Empty(){}function doesDefinePropertyWork(object){try{return Object.defineProperty(object,\"sentinel\",{}),\"sentinel\"in object}catch(exception){}}function toInteger(n){return n=+n,n!==n?n=0:0!==n&&n!==1/0&&n!==-(1/0)&&(n=(n>0||-1)*Math.floor(Math.abs(n))),n}Function.prototype.bind||(Function.prototype.bind=function(that){var target=this;if(\"function\"!=typeof target)throw new TypeError(\"Function.prototype.bind called on incompatible \"+target);var args=slice.call(arguments,1),bound=function(){if(this instanceof bound){var result=target.apply(this,args.concat(slice.call(arguments)));return Object(result)===result?result:this}return target.apply(that,args.concat(slice.call(arguments)))};return target.prototype&&(Empty.prototype=target.prototype,bound.prototype=new Empty,Empty.prototype=null),bound});var defineGetter,defineSetter,lookupGetter,lookupSetter,supportsAccessors,call=Function.prototype.call,prototypeOfArray=Array.prototype,prototypeOfObject=Object.prototype,slice=prototypeOfArray.slice,_toString=call.bind(prototypeOfObject.toString),owns=call.bind(prototypeOfObject.hasOwnProperty);if((supportsAccessors=owns(prototypeOfObject,\"__defineGetter__\"))&&(defineGetter=call.bind(prototypeOfObject.__defineGetter__),defineSetter=call.bind(prototypeOfObject.__defineSetter__),lookupGetter=call.bind(prototypeOfObject.__lookupGetter__),lookupSetter=call.bind(prototypeOfObject.__lookupSetter__)),2!=[1,2].splice(0).length)if(function(){function makeArray(l){var a=Array(l+2);return a[0]=a[1]=0,a}var lengthBefore,array=[];return array.splice.apply(array,makeArray(20)),array.splice.apply(array,makeArray(26)),lengthBefore=array.length,array.splice(5,0,\"XXX\"),lengthBefore+1==array.length,lengthBefore+1==array.length?!0:void 0}()){var array_splice=Array.prototype.splice;Array.prototype.splice=function(start,deleteCount){return arguments.length?array_splice.apply(this,[void 0===start?0:start,void 0===deleteCount?this.length-start:deleteCount].concat(slice.call(arguments,2))):[]}}else Array.prototype.splice=function(pos,removeCount){var length=this.length;pos>0?pos>length&&(pos=length):void 0==pos?pos=0:0>pos&&(pos=Math.max(length+pos,0)),length>pos+removeCount||(removeCount=length-pos);var removed=this.slice(pos,pos+removeCount),insert=slice.call(arguments,2),add=insert.length;if(pos===length)add&&this.push.apply(this,insert);else{var remove=Math.min(removeCount,length-pos),tailOldPos=pos+remove,tailNewPos=tailOldPos+add-remove,tailCount=length-tailOldPos,lengthAfterRemove=length-remove;if(tailOldPos>tailNewPos)for(var i=0;tailCount>i;++i)this[tailNewPos+i]=this[tailOldPos+i];else if(tailNewPos>tailOldPos)for(i=tailCount;i--;)this[tailNewPos+i]=this[tailOldPos+i];if(add&&pos===lengthAfterRemove)this.length=lengthAfterRemove,this.push.apply(this,insert);else for(this.length=lengthAfterRemove+add,i=0;add>i;++i)this[pos+i]=insert[i]}return removed};Array.isArray||(Array.isArray=function(obj){return\"[object Array]\"==_toString(obj)});var boxedString=Object(\"a\"),splitString=\"a\"!=boxedString[0]||!(0 in boxedString);if(Array.prototype.forEach||(Array.prototype.forEach=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,thisp=arguments[1],i=-1,length=self.length>>>0;if(\"[object Function]\"!=_toString(fun))throw new TypeError;\nfor(;length>++i;)i in self&&fun.call(thisp,self[i],i,object)}),Array.prototype.map||(Array.prototype.map=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,result=Array(length),thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)i in self&&(result[i]=fun.call(thisp,self[i],i,object));return result}),Array.prototype.filter||(Array.prototype.filter=function(fun){var value,object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,result=[],thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)i in self&&(value=self[i],fun.call(thisp,value,i,object)&&result.push(value));return result}),Array.prototype.every||(Array.prototype.every=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)if(i in self&&!fun.call(thisp,self[i],i,object))return!1;return!0}),Array.prototype.some||(Array.prototype.some=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0,thisp=arguments[1];if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");for(var i=0;length>i;i++)if(i in self&&fun.call(thisp,self[i],i,object))return!0;return!1}),Array.prototype.reduce||(Array.prototype.reduce=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0;if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");if(!length&&1==arguments.length)throw new TypeError(\"reduce of empty array with no initial value\");var result,i=0;if(arguments.length>=2)result=arguments[1];else for(;;){if(i in self){result=self[i++];break}if(++i>=length)throw new TypeError(\"reduce of empty array with no initial value\")}for(;length>i;i++)i in self&&(result=fun.call(void 0,result,self[i],i,object));return result}),Array.prototype.reduceRight||(Array.prototype.reduceRight=function(fun){var object=toObject(this),self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):object,length=self.length>>>0;if(\"[object Function]\"!=_toString(fun))throw new TypeError(fun+\" is not a function\");if(!length&&1==arguments.length)throw new TypeError(\"reduceRight of empty array with no initial value\");var result,i=length-1;if(arguments.length>=2)result=arguments[1];else for(;;){if(i in self){result=self[i--];break}if(0>--i)throw new TypeError(\"reduceRight of empty array with no initial value\")}do i in this&&(result=fun.call(void 0,result,self[i],i,object));while(i--);return result}),Array.prototype.indexOf&&-1==[0,1].indexOf(1,2)||(Array.prototype.indexOf=function(sought){var self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):toObject(this),length=self.length>>>0;if(!length)return-1;var i=0;for(arguments.length>1&&(i=toInteger(arguments[1])),i=i>=0?i:Math.max(0,length+i);length>i;i++)if(i in self&&self[i]===sought)return i;return-1}),Array.prototype.lastIndexOf&&-1==[0,1].lastIndexOf(0,-3)||(Array.prototype.lastIndexOf=function(sought){var self=splitString&&\"[object String]\"==_toString(this)?this.split(\"\"):toObject(this),length=self.length>>>0;if(!length)return-1;var i=length-1;for(arguments.length>1&&(i=Math.min(i,toInteger(arguments[1]))),i=i>=0?i:length-Math.abs(i);i>=0;i--)if(i in self&&sought===self[i])return i;return-1}),Object.getPrototypeOf||(Object.getPrototypeOf=function(object){return object.__proto__||(object.constructor?object.constructor.prototype:prototypeOfObject)}),!Object.getOwnPropertyDescriptor){var ERR_NON_OBJECT=\"Object.getOwnPropertyDescriptor called on a non-object: \";Object.getOwnPropertyDescriptor=function(object,property){if(\"object\"!=typeof object&&\"function\"!=typeof object||null===object)throw new TypeError(ERR_NON_OBJECT+object);if(owns(object,property)){var descriptor,getter,setter;if(descriptor={enumerable:!0,configurable:!0},supportsAccessors){var prototype=object.__proto__;object.__proto__=prototypeOfObject;var getter=lookupGetter(object,property),setter=lookupSetter(object,property);if(object.__proto__=prototype,getter||setter)return getter&&(descriptor.get=getter),setter&&(descriptor.set=setter),descriptor}return descriptor.value=object[property],descriptor}}}if(Object.getOwnPropertyNames||(Object.getOwnPropertyNames=function(object){return Object.keys(object)}),!Object.create){var createEmpty;createEmpty=null===Object.prototype.__proto__?function(){return{__proto__:null}}:function(){var empty={};for(var i in empty)empty[i]=null;return empty.constructor=empty.hasOwnProperty=empty.propertyIsEnumerable=empty.isPrototypeOf=empty.toLocaleString=empty.toString=empty.valueOf=empty.__proto__=null,empty},Object.create=function(prototype,properties){var object;if(null===prototype)object=createEmpty();else{if(\"object\"!=typeof prototype)throw new TypeError(\"typeof prototype[\"+typeof prototype+\"] != 'object'\");var Type=function(){};Type.prototype=prototype,object=new Type,object.__proto__=prototype}return void 0!==properties&&Object.defineProperties(object,properties),object}}if(Object.defineProperty){var definePropertyWorksOnObject=doesDefinePropertyWork({}),definePropertyWorksOnDom=\"undefined\"==typeof document||doesDefinePropertyWork(document.createElement(\"div\"));if(!definePropertyWorksOnObject||!definePropertyWorksOnDom)var definePropertyFallback=Object.defineProperty}if(!Object.defineProperty||definePropertyFallback){var ERR_NON_OBJECT_DESCRIPTOR=\"Property description must be an object: \",ERR_NON_OBJECT_TARGET=\"Object.defineProperty called on non-object: \",ERR_ACCESSORS_NOT_SUPPORTED=\"getters & setters can not be defined on this javascript engine\";Object.defineProperty=function(object,property,descriptor){if(\"object\"!=typeof object&&\"function\"!=typeof object||null===object)throw new TypeError(ERR_NON_OBJECT_TARGET+object);if(\"object\"!=typeof descriptor&&\"function\"!=typeof descriptor||null===descriptor)throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR+descriptor);if(definePropertyFallback)try{return definePropertyFallback.call(Object,object,property,descriptor)}catch(exception){}if(owns(descriptor,\"value\"))if(supportsAccessors&&(lookupGetter(object,property)||lookupSetter(object,property))){var prototype=object.__proto__;object.__proto__=prototypeOfObject,delete object[property],object[property]=descriptor.value,object.__proto__=prototype}else object[property]=descriptor.value;else{if(!supportsAccessors)throw new TypeError(ERR_ACCESSORS_NOT_SUPPORTED);owns(descriptor,\"get\")&&defineGetter(object,property,descriptor.get),owns(descriptor,\"set\")&&defineSetter(object,property,descriptor.set)}return object}}Object.defineProperties||(Object.defineProperties=function(object,properties){for(var property in properties)owns(properties,property)&&Object.defineProperty(object,property,properties[property]);return object}),Object.seal||(Object.seal=function(object){return object}),Object.freeze||(Object.freeze=function(object){return object});try{Object.freeze(function(){})}catch(exception){Object.freeze=function(freezeObject){return function(object){return\"function\"==typeof object?object:freezeObject(object)}}(Object.freeze)}if(Object.preventExtensions||(Object.preventExtensions=function(object){return object}),Object.isSealed||(Object.isSealed=function(){return!1}),Object.isFrozen||(Object.isFrozen=function(){return!1}),Object.isExtensible||(Object.isExtensible=function(object){if(Object(object)===object)throw new TypeError;for(var name=\"\";owns(object,name);)name+=\"?\";object[name]=!0;var returnValue=owns(object,name);return delete object[name],returnValue}),!Object.keys){var hasDontEnumBug=!0,dontEnums=[\"toString\",\"toLocaleString\",\"valueOf\",\"hasOwnProperty\",\"isPrototypeOf\",\"propertyIsEnumerable\",\"constructor\"],dontEnumsLength=dontEnums.length;for(var key in{toString:null})hasDontEnumBug=!1;Object.keys=function(object){if(\"object\"!=typeof object&&\"function\"!=typeof object||null===object)throw new TypeError(\"Object.keys called on a non-object\");var keys=[];for(var name in object)owns(object,name)&&keys.push(name);if(hasDontEnumBug)for(var i=0,ii=dontEnumsLength;ii>i;i++){var dontEnum=dontEnums[i];owns(object,dontEnum)&&keys.push(dontEnum)}return keys}}Date.now||(Date.now=function(){return(new Date).getTime()});var ws=\"\t\\n\u000b\\f\\r   ᠎             　\\u2028\\u2029﻿\";if(!String.prototype.trim||ws.trim()){ws=\"[\"+ws+\"]\";var trimBeginRegexp=RegExp(\"^\"+ws+ws+\"*\"),trimEndRegexp=RegExp(ws+ws+\"*$\");String.prototype.trim=function(){return(this+\"\").replace(trimBeginRegexp,\"\").replace(trimEndRegexp,\"\")}}var toObject=function(o){if(null==o)throw new TypeError(\"can't convert \"+o+\" to object\");return Object(o)}});";
+
+/***/ },
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* Jison generated parser */
+	var jsonlint = (function(){
+	var parser = {trace: function trace() { },
+	yy: {},
+	symbols_: {"error":2,"JSONString":3,"STRING":4,"JSONNumber":5,"NUMBER":6,"JSONNullLiteral":7,"NULL":8,"JSONBooleanLiteral":9,"TRUE":10,"FALSE":11,"JSONText":12,"JSONValue":13,"EOF":14,"JSONObject":15,"JSONArray":16,"{":17,"}":18,"JSONMemberList":19,"JSONMember":20,":":21,",":22,"[":23,"]":24,"JSONElementList":25,"$accept":0,"$end":1},
+	terminals_: {2:"error",4:"STRING",6:"NUMBER",8:"NULL",10:"TRUE",11:"FALSE",14:"EOF",17:"{",18:"}",21:":",22:",",23:"[",24:"]"},
+	productions_: [0,[3,1],[5,1],[7,1],[9,1],[9,1],[12,2],[13,1],[13,1],[13,1],[13,1],[13,1],[13,1],[15,2],[15,3],[20,3],[19,1],[19,3],[16,2],[16,3],[25,1],[25,3]],
+	performAction: function anonymous(yytext,yyleng,yylineno,yy,yystate,$$,_$) {
+
+	var $0 = $$.length - 1;
+	switch (yystate) {
+	case 1: // replace escaped characters with actual character
+	          this.$ = yytext.replace(/\\(\\|")/g, "$"+"1")
+	                     .replace(/\\n/g,'\n')
+	                     .replace(/\\r/g,'\r')
+	                     .replace(/\\t/g,'\t')
+	                     .replace(/\\v/g,'\v')
+	                     .replace(/\\f/g,'\f')
+	                     .replace(/\\b/g,'\b');
+	        
+	break;
+	case 2:this.$ = Number(yytext);
+	break;
+	case 3:this.$ = null;
+	break;
+	case 4:this.$ = true;
+	break;
+	case 5:this.$ = false;
+	break;
+	case 6:return this.$ = $$[$0-1];
+	break;
+	case 13:this.$ = {};
+	break;
+	case 14:this.$ = $$[$0-1];
+	break;
+	case 15:this.$ = [$$[$0-2], $$[$0]];
+	break;
+	case 16:this.$ = {}; this.$[$$[$0][0]] = $$[$0][1];
+	break;
+	case 17:this.$ = $$[$0-2]; $$[$0-2][$$[$0][0]] = $$[$0][1];
+	break;
+	case 18:this.$ = [];
+	break;
+	case 19:this.$ = $$[$0-1];
+	break;
+	case 20:this.$ = [$$[$0]];
+	break;
+	case 21:this.$ = $$[$0-2]; $$[$0-2].push($$[$0]);
+	break;
+	}
+	},
+	table: [{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],12:1,13:2,15:7,16:8,17:[1,14],23:[1,15]},{1:[3]},{14:[1,16]},{14:[2,7],18:[2,7],22:[2,7],24:[2,7]},{14:[2,8],18:[2,8],22:[2,8],24:[2,8]},{14:[2,9],18:[2,9],22:[2,9],24:[2,9]},{14:[2,10],18:[2,10],22:[2,10],24:[2,10]},{14:[2,11],18:[2,11],22:[2,11],24:[2,11]},{14:[2,12],18:[2,12],22:[2,12],24:[2,12]},{14:[2,3],18:[2,3],22:[2,3],24:[2,3]},{14:[2,4],18:[2,4],22:[2,4],24:[2,4]},{14:[2,5],18:[2,5],22:[2,5],24:[2,5]},{14:[2,1],18:[2,1],21:[2,1],22:[2,1],24:[2,1]},{14:[2,2],18:[2,2],22:[2,2],24:[2,2]},{3:20,4:[1,12],18:[1,17],19:18,20:19},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:23,15:7,16:8,17:[1,14],23:[1,15],24:[1,21],25:22},{1:[2,6]},{14:[2,13],18:[2,13],22:[2,13],24:[2,13]},{18:[1,24],22:[1,25]},{18:[2,16],22:[2,16]},{21:[1,26]},{14:[2,18],18:[2,18],22:[2,18],24:[2,18]},{22:[1,28],24:[1,27]},{22:[2,20],24:[2,20]},{14:[2,14],18:[2,14],22:[2,14],24:[2,14]},{3:20,4:[1,12],20:29},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:30,15:7,16:8,17:[1,14],23:[1,15]},{14:[2,19],18:[2,19],22:[2,19],24:[2,19]},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:31,15:7,16:8,17:[1,14],23:[1,15]},{18:[2,17],22:[2,17]},{18:[2,15],22:[2,15]},{22:[2,21],24:[2,21]}],
+	defaultActions: {16:[2,6]},
+	parseError: function parseError(str, hash) {
+	    throw new Error(str);
+	},
+	parse: function parse(input) {
+	    var self = this,
+	        stack = [0],
+	        vstack = [null], // semantic value stack
+	        lstack = [], // location stack
+	        table = this.table,
+	        yytext = '',
+	        yylineno = 0,
+	        yyleng = 0,
+	        recovering = 0,
+	        TERROR = 2,
+	        EOF = 1;
+
+	    //this.reductionCount = this.shiftCount = 0;
+
+	    this.lexer.setInput(input);
+	    this.lexer.yy = this.yy;
+	    this.yy.lexer = this.lexer;
+	    if (typeof this.lexer.yylloc == 'undefined')
+	        this.lexer.yylloc = {};
+	    var yyloc = this.lexer.yylloc;
+	    lstack.push(yyloc);
+
+	    if (typeof this.yy.parseError === 'function')
+	        this.parseError = this.yy.parseError;
+
+	    function popStack (n) {
+	        stack.length = stack.length - 2*n;
+	        vstack.length = vstack.length - n;
+	        lstack.length = lstack.length - n;
+	    }
+
+	    function lex() {
+	        var token;
+	        token = self.lexer.lex() || 1; // $end = 1
+	        // if token isn't its numeric value, convert
+	        if (typeof token !== 'number') {
+	            token = self.symbols_[token] || token;
+	        }
+	        return token;
+	    }
+
+	    var symbol, preErrorSymbol, state, action, a, r, yyval={},p,len,newState, expected;
+	    while (true) {
+	        // retreive state number from top of stack
+	        state = stack[stack.length-1];
+
+	        // use default actions if available
+	        if (this.defaultActions[state]) {
+	            action = this.defaultActions[state];
+	        } else {
+	            if (symbol == null)
+	                symbol = lex();
+	            // read action for current state and first input
+	            action = table[state] && table[state][symbol];
+	        }
+
+	        // handle parse error
+	        _handle_error:
+	        if (typeof action === 'undefined' || !action.length || !action[0]) {
+
+	            if (!recovering) {
+	                // Report error
+	                expected = [];
+	                for (p in table[state]) if (this.terminals_[p] && p > 2) {
+	                    expected.push("'"+this.terminals_[p]+"'");
+	                }
+	                var errStr = '';
+	                if (this.lexer.showPosition) {
+	                    errStr = 'Parse error on line '+(yylineno+1)+":\n"+this.lexer.showPosition()+"\nExpecting "+expected.join(', ') + ", got '" + this.terminals_[symbol]+ "'";
+	                } else {
+	                    errStr = 'Parse error on line '+(yylineno+1)+": Unexpected " +
+	                                  (symbol == 1 /*EOF*/ ? "end of input" :
+	                                              ("'"+(this.terminals_[symbol] || symbol)+"'"));
+	                }
+	                this.parseError(errStr,
+	                    {text: this.lexer.match, token: this.terminals_[symbol] || symbol, line: this.lexer.yylineno, loc: yyloc, expected: expected});
+	            }
+
+	            // just recovered from another error
+	            if (recovering == 3) {
+	                if (symbol == EOF) {
+	                    throw new Error(errStr || 'Parsing halted.');
+	                }
+
+	                // discard current lookahead and grab another
+	                yyleng = this.lexer.yyleng;
+	                yytext = this.lexer.yytext;
+	                yylineno = this.lexer.yylineno;
+	                yyloc = this.lexer.yylloc;
+	                symbol = lex();
+	            }
+
+	            // try to recover from error
+	            while (1) {
+	                // check for error recovery rule in this state
+	                if ((TERROR.toString()) in table[state]) {
+	                    break;
+	                }
+	                if (state == 0) {
+	                    throw new Error(errStr || 'Parsing halted.');
+	                }
+	                popStack(1);
+	                state = stack[stack.length-1];
+	            }
+
+	            preErrorSymbol = symbol; // save the lookahead token
+	            symbol = TERROR;         // insert generic error symbol as new lookahead
+	            state = stack[stack.length-1];
+	            action = table[state] && table[state][TERROR];
+	            recovering = 3; // allow 3 real symbols to be shifted before reporting a new error
+	        }
+
+	        // this shouldn't happen, unless resolve defaults are off
+	        if (action[0] instanceof Array && action.length > 1) {
+	            throw new Error('Parse Error: multiple actions possible at state: '+state+', token: '+symbol);
+	        }
+
+	        switch (action[0]) {
+
+	            case 1: // shift
+	                //this.shiftCount++;
+
+	                stack.push(symbol);
+	                vstack.push(this.lexer.yytext);
+	                lstack.push(this.lexer.yylloc);
+	                stack.push(action[1]); // push state
+	                symbol = null;
+	                if (!preErrorSymbol) { // normal execution/no error
+	                    yyleng = this.lexer.yyleng;
+	                    yytext = this.lexer.yytext;
+	                    yylineno = this.lexer.yylineno;
+	                    yyloc = this.lexer.yylloc;
+	                    if (recovering > 0)
+	                        recovering--;
+	                } else { // error just occurred, resume old lookahead f/ before error
+	                    symbol = preErrorSymbol;
+	                    preErrorSymbol = null;
+	                }
+	                break;
+
+	            case 2: // reduce
+	                //this.reductionCount++;
+
+	                len = this.productions_[action[1]][1];
+
+	                // perform semantic action
+	                yyval.$ = vstack[vstack.length-len]; // default to $$ = $1
+	                // default location, uses first token for firsts, last for lasts
+	                yyval._$ = {
+	                    first_line: lstack[lstack.length-(len||1)].first_line,
+	                    last_line: lstack[lstack.length-1].last_line,
+	                    first_column: lstack[lstack.length-(len||1)].first_column,
+	                    last_column: lstack[lstack.length-1].last_column
+	                };
+	                r = this.performAction.call(yyval, yytext, yyleng, yylineno, this.yy, action[1], vstack, lstack);
+
+	                if (typeof r !== 'undefined') {
+	                    return r;
+	                }
+
+	                // pop off stack
+	                if (len) {
+	                    stack = stack.slice(0,-1*len*2);
+	                    vstack = vstack.slice(0, -1*len);
+	                    lstack = lstack.slice(0, -1*len);
+	                }
+
+	                stack.push(this.productions_[action[1]][0]);    // push nonterminal (reduce)
+	                vstack.push(yyval.$);
+	                lstack.push(yyval._$);
+	                // goto new state = table[STATE][NONTERMINAL]
+	                newState = table[stack[stack.length-2]][stack[stack.length-1]];
+	                stack.push(newState);
+	                break;
+
+	            case 3: // accept
+	                return true;
+	        }
+
+	    }
+
+	    return true;
+	}};
+	/* Jison generated lexer */
+	var lexer = (function(){
+	var lexer = ({EOF:1,
+	parseError:function parseError(str, hash) {
+	        if (this.yy.parseError) {
+	            this.yy.parseError(str, hash);
+	        } else {
+	            throw new Error(str);
+	        }
+	    },
+	setInput:function (input) {
+	        this._input = input;
+	        this._more = this._less = this.done = false;
+	        this.yylineno = this.yyleng = 0;
+	        this.yytext = this.matched = this.match = '';
+	        this.conditionStack = ['INITIAL'];
+	        this.yylloc = {first_line:1,first_column:0,last_line:1,last_column:0};
+	        return this;
+	    },
+	input:function () {
+	        var ch = this._input[0];
+	        this.yytext+=ch;
+	        this.yyleng++;
+	        this.match+=ch;
+	        this.matched+=ch;
+	        var lines = ch.match(/\n/);
+	        if (lines) this.yylineno++;
+	        this._input = this._input.slice(1);
+	        return ch;
+	    },
+	unput:function (ch) {
+	        this._input = ch + this._input;
+	        return this;
+	    },
+	more:function () {
+	        this._more = true;
+	        return this;
+	    },
+	less:function (n) {
+	        this._input = this.match.slice(n) + this._input;
+	    },
+	pastInput:function () {
+	        var past = this.matched.substr(0, this.matched.length - this.match.length);
+	        return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
+	    },
+	upcomingInput:function () {
+	        var next = this.match;
+	        if (next.length < 20) {
+	            next += this._input.substr(0, 20-next.length);
+	        }
+	        return (next.substr(0,20)+(next.length > 20 ? '...':'')).replace(/\n/g, "");
+	    },
+	showPosition:function () {
+	        var pre = this.pastInput();
+	        var c = new Array(pre.length + 1).join("-");
+	        return pre + this.upcomingInput() + "\n" + c+"^";
+	    },
+	next:function () {
+	        if (this.done) {
+	            return this.EOF;
+	        }
+	        if (!this._input) this.done = true;
+
+	        var token,
+	            match,
+	            tempMatch,
+	            index,
+	            col,
+	            lines;
+	        if (!this._more) {
+	            this.yytext = '';
+	            this.match = '';
+	        }
+	        var rules = this._currentRules();
+	        for (var i=0;i < rules.length; i++) {
+	            tempMatch = this._input.match(this.rules[rules[i]]);
+	            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
+	                match = tempMatch;
+	                index = i;
+	                if (!this.options.flex) break;
+	            }
+	        }
+	        if (match) {
+	            lines = match[0].match(/\n.*/g);
+	            if (lines) this.yylineno += lines.length;
+	            this.yylloc = {first_line: this.yylloc.last_line,
+	                           last_line: this.yylineno+1,
+	                           first_column: this.yylloc.last_column,
+	                           last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match[0].length}
+	            this.yytext += match[0];
+	            this.match += match[0];
+	            this.yyleng = this.yytext.length;
+	            this._more = false;
+	            this._input = this._input.slice(match[0].length);
+	            this.matched += match[0];
+	            token = this.performAction.call(this, this.yy, this, rules[index],this.conditionStack[this.conditionStack.length-1]);
+	            if (this.done && this._input) this.done = false;
+	            if (token) return token;
+	            else return;
+	        }
+	        if (this._input === "") {
+	            return this.EOF;
+	        } else {
+	            this.parseError('Lexical error on line '+(this.yylineno+1)+'. Unrecognized text.\n'+this.showPosition(), 
+	                    {text: "", token: null, line: this.yylineno});
+	        }
+	    },
+	lex:function lex() {
+	        var r = this.next();
+	        if (typeof r !== 'undefined') {
+	            return r;
+	        } else {
+	            return this.lex();
+	        }
+	    },
+	begin:function begin(condition) {
+	        this.conditionStack.push(condition);
+	    },
+	popState:function popState() {
+	        return this.conditionStack.pop();
+	    },
+	_currentRules:function _currentRules() {
+	        return this.conditions[this.conditionStack[this.conditionStack.length-1]].rules;
+	    },
+	topState:function () {
+	        return this.conditionStack[this.conditionStack.length-2];
+	    },
+	pushState:function begin(condition) {
+	        this.begin(condition);
+	    }});
+	lexer.options = {};
+	lexer.performAction = function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
+
+	var YYSTATE=YY_START
+	switch($avoiding_name_collisions) {
+	case 0:/* skip whitespace */
+	break;
+	case 1:return 6
+	break;
+	case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4
+	break;
+	case 3:return 17
+	break;
+	case 4:return 18
+	break;
+	case 5:return 23
+	break;
+	case 6:return 24
+	break;
+	case 7:return 22
+	break;
+	case 8:return 21
+	break;
+	case 9:return 10
+	break;
+	case 10:return 11
+	break;
+	case 11:return 8
+	break;
+	case 12:return 14
+	break;
+	case 13:return 'INVALID'
+	break;
+	}
+	};
+	lexer.rules = [/^(?:\s+)/,/^(?:(-?([0-9]|[1-9][0-9]+))(\.[0-9]+)?([eE][-+]?[0-9]+)?\b)/,/^(?:"(?:\\[\\"bfnrt/]|\\u[a-fA-F0-9]{4}|[^\\\0-\x09\x0a-\x1f"])*")/,/^(?:\{)/,/^(?:\})/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?::)/,/^(?:true\b)/,/^(?:false\b)/,/^(?:null\b)/,/^(?:$)/,/^(?:.)/];
+	lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13],"inclusive":true}};
+
+
+	;
+	return lexer;})()
+	parser.lexer = lexer;
+	return parser;
+	})();
+	if (true) {
+	  exports.parser = jsonlint;
+	  exports.parse = jsonlint.parse;
+	}
 
 /***/ }
 /******/ ])

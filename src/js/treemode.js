@@ -25,24 +25,24 @@ var treemode = {};
  * @private
  */
 treemode.create = function (container, options) {
-  if (!container) {
-    throw new Error('No container element provided.');
-  }
-  this.container = container;
-  this.dom = {};
-  this.highlighter = new Highlighter();
-  this.selection = undefined; // will hold the last input selection
-  this.checked = {}; // will hold the checked nodes
+    if (!container) {
+        throw new Error('No container element provided.');
+    }
+    this.container = container;
+    this.dom = {};
+    this.highlighter = new Highlighter();
+    this.selection = undefined; // will hold the last input selection
+    this.checked = {}; // will hold the checked nodes
 
-  this._setOptions(options);
-  //console.log(options)
+    this._setOptions(options);
+    //console.log(options)
 
-  if (this.options.history && this.options.mode !== 'view') {
-    this.history = new History(this);
-  }
+    if (this.options.history && this.options.mode !== 'view') {
+        this.history = new History(this);
+    }
 
-  this._createFrame();
-  this._createTable();
+    this._createFrame();
+    this._createTable();
 };
 
 /**
@@ -50,9 +50,9 @@ treemode.create = function (container, options) {
  * @private
  */
 treemode._delete = function () {
-  if (this.frame && this.container && this.frame.parentNode == this.container) {
-    this.container.removeChild(this.frame);
-  }
+    if (this.frame && this.container && this.frame.parentNode == this.container) {
+        this.container.removeChild(this.frame);
+    }
 };
 
 /**
@@ -61,21 +61,21 @@ treemode._delete = function () {
  * @private
  */
 treemode._setOptions = function (options) {
-  this.options = {
-    search: true,
-    history: true,
-    mode: 'tree',
-    name: undefined   // field name of root node
-  };
+    this.options = {
+        search: true,
+        history: true,
+        mode: 'tree',
+        name: undefined // field name of root node
+    };
 
-  // copy all options
-  if (options) {
-    for (var prop in options) {
-      if (options.hasOwnProperty(prop)) {
-        this.options[prop] = options[prop];
-      }
+    // copy all options
+    if (options) {
+        for (var prop in options) {
+            if (options.hasOwnProperty(prop)) {
+                this.options[prop] = options[prop];
+            }
+        }
     }
-  }
 };
 
 // node currently being edited
@@ -91,40 +91,39 @@ var domFocus = null;
  *                                       Can also be set using setName(name).
  */
 treemode.set = function (json, name) {
-  // adjust field name for root node
-  if (name) {
-    // TODO: deprecated since version 2.2.0. Cleanup some day.
-    util.log('Warning: second parameter "name" is deprecated. ' +
-        'Use setName(name) instead.');
-    this.options.name = name;
-  }
+    // adjust field name for root node
+    if (name) {
+        // TODO: deprecated since version 2.2.0. Cleanup some day.
+        util.log('Warning: second parameter "name" is deprecated. ' +
+            'Use setName(name) instead.');
+        this.options.name = name;
+    }
 
-  // verify if json is valid JSON, ignore when a function
-  if (json instanceof Function || (json === undefined)) {
-    this.clear();
-  }
-  else {
-    this.content.removeChild(this.table);  // Take the table offline
+    // verify if json is valid JSON, ignore when a function
+    if (json instanceof Function || (json === undefined)) {
+        this.clear();
+    } else {
+        this.content.removeChild(this.table); // Take the table offline
 
-    // replace the root node
-    var params = {
-      'field': this.options.name,
-      'value': json
-    };
-    var node = new Node(this, params);
-    this._setRoot(node);
+        // replace the root node
+        var params = {
+            'field': this.options.name,
+            'value': json
+        };
+        var node = new Node(this, params);
+        this._setRoot(node);
 
-    // expand
-    var recurse = false;
-    this.node.expand(recurse);
+        // expand
+        var recurse = false;
+        this.node.expand(recurse);
 
-    this.content.appendChild(this.table);  // Put the table online again
-  }
+        this.content.appendChild(this.table); // Put the table online again
+    }
 
-  // TODO: maintain history, store last state and previous document
-  if (this.history) {
-    this.history.clear();
-  }
+    // TODO: maintain history, store last state and previous document
+    if (this.history) {
+        this.history.clear();
+    }
 };
 
 /**
@@ -132,33 +131,32 @@ treemode.set = function (json, name) {
  * @return {Object | undefined} json
  */
 treemode.get = function () {
-  // remove focus from currently edited node
-  if (focusNode) {
-    focusNode.blur();
-  }
+    // remove focus from currently edited node
+    if (focusNode) {
+        focusNode.blur();
+    }
 
-  if (this.node) {
-    return this.node.getValue();
-  }
-  else {
-    return undefined;
-  }
+    if (this.node) {
+        return this.node.getValue();
+    } else {
+        return undefined;
+    }
 };
 
 /**
  * Get the text contents of the editor
  * @return {String} jsonText
  */
-treemode.getText = function() {
-  return JSON.stringify(this.get());
+treemode.getText = function () {
+    return JSON.stringify(this.get());
 };
 
 /**
  * Set the text contents of the editor
  * @param {String} jsonText
  */
-treemode.setText = function(jsonText) {
-  this.set(util.parse(jsonText));
+treemode.setText = function (jsonText) {
+    this.set(util.parse(jsonText));
 };
 
 /**
@@ -166,10 +164,10 @@ treemode.setText = function(jsonText) {
  * @param {String | undefined} name
  */
 treemode.setName = function (name) {
-  this.options.name = name;
-  if (this.node) {
-    this.node.updateField(this.options.name);
-  }
+    this.options.name = name;
+    if (this.node) {
+        this.node.updateField(this.options.name);
+    }
 };
 
 /**
@@ -177,7 +175,7 @@ treemode.setName = function (name) {
  * @return {String | undefined} name
  */
 treemode.getName = function () {
-  return this.options.name;
+    return this.options.name;
 };
 
 /**
@@ -188,34 +186,31 @@ treemode.getName = function () {
  * - to the first button in the top menu
  */
 treemode.focus = function () {
-  var input = this.content.querySelector('[contenteditable=true]');
-  if (input) {
-    input.focus();
-  }
-  else if (this.node.dom.expand) {
-    this.node.dom.expand.focus();
-  }
-  else if (this.node.dom.menu) {
-    this.node.dom.menu.focus();
-  }
-  else {
-    // focus to the first button in the menu
-    input = this.frame.querySelector('button');
+    var input = this.content.querySelector('[contenteditable=true]');
     if (input) {
-      input.focus();
+        input.focus();
+    } else if (this.node.dom.expand) {
+        this.node.dom.expand.focus();
+    } else if (this.node.dom.menu) {
+        this.node.dom.menu.focus();
+    } else {
+        // focus to the first button in the menu
+        input = this.frame.querySelector('button');
+        if (input) {
+            input.focus();
+        }
     }
-  }
 };
 
 /**
  * Remove the root node from the editor
  */
 treemode.clear = function () {
-  if (this.node) {
-    this.node.collapse();
-    this.tbody.removeChild(this.node.getDom());
-    delete this.node;
-  }
+    if (this.node) {
+        this.node.collapse();
+        this.tbody.removeChild(this.node.getDom());
+        delete this.node;
+    }
 };
 
 /**
@@ -224,12 +219,12 @@ treemode.clear = function () {
  * @private
  */
 treemode._setRoot = function (node) {
-  this.clear();
+    this.clear();
 
-  this.node = node;
+    this.node = node;
 
-  // append to the dom
-  this.tbody.appendChild(node.getDom());
+    // append to the dom
+    this.tbody.appendChild(node.getDom());
 };
 
 /**
@@ -245,39 +240,38 @@ treemode._setRoot = function (node) {
  *                                              'value')
  */
 treemode.search = function (text) {
-  var results;
-  if (this.node) {
-    this.content.removeChild(this.table);  // Take the table offline
-    results = this.node.search(text);
-    this.content.appendChild(this.table);  // Put the table online again
-  }
-  else {
-    results = [];
-  }
+    var results;
+    if (this.node) {
+        this.content.removeChild(this.table); // Take the table offline
+        results = this.node.search(text);
+        this.content.appendChild(this.table); // Put the table online again
+    } else {
+        results = [];
+    }
 
-  return results;
+    return results;
 };
 
 /**
  * Expand all nodes
  */
 treemode.expandAll = function () {
-  if (this.node) {
-    this.content.removeChild(this.table);  // Take the table offline
-    this.node.expand();
-    this.content.appendChild(this.table);  // Put the table online again
-  }
+    if (this.node) {
+        this.content.removeChild(this.table); // Take the table offline
+        this.node.expand();
+        this.content.appendChild(this.table); // Put the table online again
+    }
 };
 
 /**
  * Collapse all nodes
  */
 treemode.collapseAll = function () {
-  if (this.node) {
-    this.content.removeChild(this.table);  // Take the table offline
-    this.node.collapse();
-    this.content.appendChild(this.table);  // Put the table online again
-  }
+    if (this.node) {
+        this.content.removeChild(this.table); // Take the table offline
+        this.node.collapse();
+        this.content.appendChild(this.table); // Put the table online again
+    }
 };
 
 /**
@@ -295,20 +289,19 @@ treemode.collapseAll = function () {
  * @private
  */
 treemode._onAction = function (action, params) {
-  // add an action to the history
-  if (this.history) {
-    this.history.add(action, params);
-  }
+    // add an action to the history
+    if (this.history) {
+        this.history.add(action, params);
+    }
 
-  // trigger the onChange callback
-  if (this.options.change) {
-    try {
-      this.options.change();
+    // trigger the onChange callback
+    if (this.options.change) {
+        try {
+            this.options.change();
+        } catch (err) {
+            util.log('Error in change callback: ', err);
+        }
     }
-    catch (err) {
-      util.log('Error in change callback: ', err);
-    }
-  }
 };
 
 /**
@@ -317,74 +310,99 @@ treemode._onAction = function (action, params) {
  * @param {Number} mouseY  Absolute mouse position in pixels
  */
 treemode.startAutoScroll = function (mouseY) {
-  var me = this;
-  var content = this.content;
-  var top = util.getAbsoluteTop(content);
-  var height = content.clientHeight;
-  var bottom = top + height;
-  var margin = 24;
-  var interval = 50; // ms
+    var me = this;
+    var content = this.content;
+    var top = util.getAbsoluteTop(content);
+    var height = content.clientHeight;
+    var bottom = top + height;
+    var margin = 24;
+    var interval = 50; // ms
 
-  if ((mouseY < top + margin) && content.scrollTop > 0) {
-    this.autoScrollStep = ((top + margin) - mouseY) / 3;
-  }
-  else if (mouseY > bottom - margin &&
-      height + content.scrollTop < content.scrollHeight) {
-    this.autoScrollStep = ((bottom - margin) - mouseY) / 3;
-  }
-  else {
-    this.autoScrollStep = undefined;
-  }
-
-  if (this.autoScrollStep) {
-    if (!this.autoScrollTimer) {
-      this.autoScrollTimer = setInterval(function () {
-        if (me.autoScrollStep) {
-          content.scrollTop -= me.autoScrollStep;
-        }
-        else {
-          me.stopAutoScroll();
-        }
-      }, interval);
+    if ((mouseY < top + margin) && content.scrollTop > 0) {
+        this.autoScrollStep = ((top + margin) - mouseY) / 3;
+    } else if (mouseY > bottom - margin &&
+        height + content.scrollTop < content.scrollHeight) {
+        this.autoScrollStep = ((bottom - margin) - mouseY) / 3;
+    } else {
+        this.autoScrollStep = undefined;
     }
-  }
-  else {
-    this.stopAutoScroll();
-  }
+
+    if (this.autoScrollStep) {
+        if (!this.autoScrollTimer) {
+            this.autoScrollTimer = setInterval(function () {
+                if (me.autoScrollStep) {
+                    content.scrollTop -= me.autoScrollStep;
+                } else {
+                    me.stopAutoScroll();
+                }
+            }, interval);
+        }
+    } else {
+        this.stopAutoScroll();
+    }
 };
 
 /**
  * Stop auto scrolling. Only applicable when scrolling
  */
 treemode.stopAutoScroll = function () {
-  if (this.autoScrollTimer) {
-    clearTimeout(this.autoScrollTimer);
-    delete this.autoScrollTimer;
-  }
-  if (this.autoScrollStep) {
-    delete this.autoScrollStep;
-  }
+    if (this.autoScrollTimer) {
+        clearTimeout(this.autoScrollTimer);
+        delete this.autoScrollTimer;
+    }
+    if (this.autoScrollStep) {
+        delete this.autoScrollStep;
+    }
 };
 
+treemode.setChecked = function (node) {
+    //console.log("Set checked!!!!!!!!!!!!!!");
+    var o = {},
+        key, value;
+    var curr = node;
 
-treemode.setChecked = function(node) {
-    //console.log("Set checked!!!!!!!!!!!!!!")
-    var key = node.field;
-    var value = node.getValue();
-    var o = {}
-    o[key] = value
-    //console.log(o);
-    this.checked = util.extend(this.checked, o);
-}
+    // dummy {key:value} pair
+    key = node.field || node.index;
+    value = node.getValue();
+    o[key] = value;
 
-treemode.getChecked = function() {
-  // remove focus from currently edited node
-  //if (focusNode) {
-  //  focusNode.blur();
-  //}
+    var path = [];
+    var output = o;
+    if (!node.parent) { //check on root node, select the entire tree
+        path = [];
+        output = value;
+    } else {
+        while (node.parent.parent) { // build the path of the current node
+            var par = node.parent;
+            var parKey = par.field || par.index;
+            path.push(parKey);
+            // wrap the output with parent's key, add one more step to path
+            var p = {};
+            p[parKey] = output;
+            output = p;
+            node = node.parent;
+        }
+        path.unshift(key); // push the current node's key/index
+        //console.log(path.reverse());
+    }
+
+
+    if (curr.dom.checkbox.checked) { // if checking the checkbox
+        this.checked = util.extend(this.checked, output);
+    } else {
+        this.checked = util.deleteNested(this.checked, path.reverse());
+        console.log(this.checked);
+    }
+};
+
+treemode.getChecked = function () {
+    // remove focus from currently edited node
+    //if (focusNode) {
+    //  focusNode.blur();
+    //}
 
     return this.checked;
-}
+};
 
 /**
  * Set the focus to an element in the editor, set text selection, and
@@ -396,20 +414,20 @@ treemode.getChecked = function() {
  *                            {Number} scrollTop            Scroll position
  */
 treemode.setSelection = function (selection) {
-  if (!selection) {
-    return;
-  }
+    if (!selection) {
+        return;
+    }
 
-  if ('scrollTop' in selection && this.content) {
-    // TODO: animated scroll
-    this.content.scrollTop = selection.scrollTop;
-  }
-  if (selection.range) {
-    util.setSelectionOffset(selection.range);
-  }
-  if (selection.dom) {
-    selection.dom.focus();
-  }
+    if ('scrollTop' in selection && this.content) {
+        // TODO: animated scroll
+        this.content.scrollTop = selection.scrollTop;
+    }
+    if (selection.range) {
+        util.setSelectionOffset(selection.range);
+    }
+    if (selection.dom) {
+        selection.dom.focus();
+    }
 };
 
 /**
@@ -421,11 +439,11 @@ treemode.setSelection = function (selection) {
  *                            {Number} scrollTop            Scroll position
  */
 treemode.getSelection = function () {
-  return {
-    dom: domFocus,
-    scrollTop: this.content ? this.content.scrollTop : 0,
-    range: util.getSelectionOffset()
-  };
+    return {
+        dom: domFocus,
+        scrollTop: this.content ? this.content.scrollTop : 0,
+        range: util.getSelectionOffset()
+    };
 };
 
 /**
@@ -438,50 +456,48 @@ treemode.getSelection = function () {
  *                                         when not.
  */
 treemode.scrollTo = function (top, callback) {
-  var content = this.content;
-  if (content) {
-    var editor = this;
-    // cancel any running animation
-    if (editor.animateTimeout) {
-      clearTimeout(editor.animateTimeout);
-      delete editor.animateTimeout;
-    }
-    if (editor.animateCallback) {
-      editor.animateCallback(false);
-      delete editor.animateCallback;
-    }
-
-    // calculate final scroll position
-    var height = content.clientHeight;
-    var bottom = content.scrollHeight - height;
-    var finalScrollTop = Math.min(Math.max(top - height / 4, 0), bottom);
-
-    // animate towards the new scroll position
-    var animate = function () {
-      var scrollTop = content.scrollTop;
-      var diff = (finalScrollTop - scrollTop);
-      if (Math.abs(diff) > 3) {
-        content.scrollTop += diff / 3;
-        editor.animateCallback = callback;
-        editor.animateTimeout = setTimeout(animate, 50);
-      }
-      else {
-        // finished
-        if (callback) {
-          callback(true);
+    var content = this.content;
+    if (content) {
+        var editor = this;
+        // cancel any running animation
+        if (editor.animateTimeout) {
+            clearTimeout(editor.animateTimeout);
+            delete editor.animateTimeout;
         }
-        content.scrollTop = finalScrollTop;
-        delete editor.animateTimeout;
-        delete editor.animateCallback;
-      }
-    };
-    animate();
-  }
-  else {
-    if (callback) {
-      callback(false);
+        if (editor.animateCallback) {
+            editor.animateCallback(false);
+            delete editor.animateCallback;
+        }
+
+        // calculate final scroll position
+        var height = content.clientHeight;
+        var bottom = content.scrollHeight - height;
+        var finalScrollTop = Math.min(Math.max(top - height / 4, 0), bottom);
+
+        // animate towards the new scroll position
+        var animate = function () {
+            var scrollTop = content.scrollTop;
+            var diff = (finalScrollTop - scrollTop);
+            if (Math.abs(diff) > 3) {
+                content.scrollTop += diff / 3;
+                editor.animateCallback = callback;
+                editor.animateTimeout = setTimeout(animate, 50);
+            } else {
+                // finished
+                if (callback) {
+                    callback(true);
+                }
+                content.scrollTop = finalScrollTop;
+                delete editor.animateTimeout;
+                delete editor.animateCallback;
+            }
+        };
+        animate();
+    } else {
+        if (callback) {
+            callback(false);
+        }
     }
-  }
 };
 
 /**
@@ -489,108 +505,109 @@ treemode.scrollTo = function (top, callback) {
  * @private
  */
 treemode._createFrame = function () {
-  // create the frame
-  this.frame = document.createElement('div');
-  this.frame.className = 'jsoneditor';
-  this.container.appendChild(this.frame);
+    // create the frame
+    this.frame = document.createElement('div');
+    this.frame.className = 'jsoneditor';
+    this.container.appendChild(this.frame);
 
-  // create one global event listener to handle all events from all nodes
-  var editor = this;
-  function onEvent(event) {
-    editor._onEvent(event);
-  }
-  this.frame.onclick = function (event) {
-    var target = event.target;// || event.srcElement;
+    // create one global event listener to handle all events from all nodes
+    var editor = this;
 
-    onEvent(event);
-
-    // prevent default submit action of buttons when editor is located
-    // inside a form
-    if (target.nodeName == 'BUTTON') {
-      event.preventDefault();
+    function onEvent(event) {
+        editor._onEvent(event);
     }
-  };
-  this.frame.oninput = onEvent;
-  this.frame.onchange = onEvent;
-  this.frame.onkeydown = onEvent;
-  this.frame.onkeyup = onEvent;
-  this.frame.oncut = onEvent;
-  this.frame.onpaste = onEvent;
-  this.frame.onmousedown = onEvent;
-  this.frame.onmouseup = onEvent;
-  this.frame.onmouseover = onEvent;
-  this.frame.onmouseout = onEvent;
-  // Note: focus and blur events do not propagate, therefore they defined
-  // using an eventListener with useCapture=true
-  // see http://www.quirksmode.org/blog/archives/2008/04/delegating_the.html
-  util.addEventListener(this.frame, 'focus', onEvent, true);
-  util.addEventListener(this.frame, 'blur', onEvent, true);
-  this.frame.onfocusin = onEvent;  // for IE
-  this.frame.onfocusout = onEvent; // for IE
+    this.frame.onclick = function (event) {
+        var target = event.target; // || event.srcElement;
 
-  // create menu
-  this.menu = document.createElement('div');
-  this.menu.className = 'menu';
-  this.frame.appendChild(this.menu);
+        onEvent(event);
 
-  var expandAll = document.createElement('button');
-  expandAll.className = 'expand-all';
-  expandAll.title = 'Expand all fields';
-  expandAll.onclick = function () {
-    editor.expandAll();
-  };
-  this.menu.appendChild(expandAll);
-
-  // create collapse all button
-  var collapseAll = document.createElement('button');
-  collapseAll.title = 'Collapse all fields';
-  collapseAll.className = 'collapse-all';
-  collapseAll.onclick = function () {
-    editor.collapseAll();
-  };
-  this.menu.appendChild(collapseAll);
-
-  // create undo/redo buttons
-  if (this.history) {
-    // create undo button
-    var undo = document.createElement('button');
-    undo.className = 'undo separator';
-    undo.title = 'Undo last action (Ctrl+Z)';
-    undo.onclick = function () {
-      editor._onUndo();
+        // prevent default submit action of buttons when editor is located
+        // inside a form
+        if (target.nodeName == 'BUTTON') {
+            event.preventDefault();
+        }
     };
-    this.menu.appendChild(undo);
-    this.dom.undo = undo;
+    this.frame.oninput = onEvent;
+    this.frame.onchange = onEvent;
+    this.frame.onkeydown = onEvent;
+    this.frame.onkeyup = onEvent;
+    this.frame.oncut = onEvent;
+    this.frame.onpaste = onEvent;
+    this.frame.onmousedown = onEvent;
+    this.frame.onmouseup = onEvent;
+    this.frame.onmouseover = onEvent;
+    this.frame.onmouseout = onEvent;
+    // Note: focus and blur events do not propagate, therefore they defined
+    // using an eventListener with useCapture=true
+    // see http://www.quirksmode.org/blog/archives/2008/04/delegating_the.html
+    util.addEventListener(this.frame, 'focus', onEvent, true);
+    util.addEventListener(this.frame, 'blur', onEvent, true);
+    this.frame.onfocusin = onEvent; // for IE
+    this.frame.onfocusout = onEvent; // for IE
 
-    // create redo button
-    var redo = document.createElement('button');
-    redo.className = 'redo';
-    redo.title = 'Redo (Ctrl+Shift+Z)';
-    redo.onclick = function () {
-      editor._onRedo();
+    // create menu
+    this.menu = document.createElement('div');
+    this.menu.className = 'menu';
+    this.frame.appendChild(this.menu);
+
+    var expandAll = document.createElement('button');
+    expandAll.className = 'expand-all';
+    expandAll.title = 'Expand all fields';
+    expandAll.onclick = function () {
+        editor.expandAll();
     };
-    this.menu.appendChild(redo);
-    this.dom.redo = redo;
+    this.menu.appendChild(expandAll);
 
-    // register handler for onchange of history
-    this.history.onChange = function () {
-      undo.disabled = !editor.history.canUndo();
-      redo.disabled = !editor.history.canRedo();
+    // create collapse all button
+    var collapseAll = document.createElement('button');
+    collapseAll.title = 'Collapse all fields';
+    collapseAll.className = 'collapse-all';
+    collapseAll.onclick = function () {
+        editor.collapseAll();
     };
-    this.history.onChange();
-  }
+    this.menu.appendChild(collapseAll);
 
-  // create mode box
-  if (this.options && this.options.modes && this.options.modes.length) {
-    var modeBox = modeswitcher.create(this, this.options.modes, this.options.mode);
-    this.menu.appendChild(modeBox);
-    this.dom.modeBox = modeBox;
-  }
+    // create undo/redo buttons
+    if (this.history) {
+        // create undo button
+        var undo = document.createElement('button');
+        undo.className = 'undo separator';
+        undo.title = 'Undo last action (Ctrl+Z)';
+        undo.onclick = function () {
+            editor._onUndo();
+        };
+        this.menu.appendChild(undo);
+        this.dom.undo = undo;
 
-  // create search box
-  if (this.options.search) {
-    this.searchBox = new SearchBox(this, this.menu);
-  }
+        // create redo button
+        var redo = document.createElement('button');
+        redo.className = 'redo';
+        redo.title = 'Redo (Ctrl+Shift+Z)';
+        redo.onclick = function () {
+            editor._onRedo();
+        };
+        this.menu.appendChild(redo);
+        this.dom.redo = redo;
+
+        // register handler for onchange of history
+        this.history.onChange = function () {
+            undo.disabled = !editor.history.canUndo();
+            redo.disabled = !editor.history.canRedo();
+        };
+        this.history.onChange();
+    }
+
+    // create mode box
+    if (this.options && this.options.modes && this.options.modes.length) {
+        var modeBox = modeswitcher.create(this, this.options.modes, this.options.mode);
+        this.menu.appendChild(modeBox);
+        this.dom.modeBox = modeBox;
+    }
+
+    // create search box
+    if (this.options.search) {
+        this.searchBox = new SearchBox(this, this.menu);
+    }
 };
 
 /**
@@ -598,15 +615,15 @@ treemode._createFrame = function () {
  * @private
  */
 treemode._onUndo = function () {
-  if (this.history) {
-    // undo last action
-    this.history.undo();
+    if (this.history) {
+        // undo last action
+        this.history.undo();
 
-    // trigger change callback
-    if (this.options.change) {
-      this.options.change();
+        // trigger change callback
+        if (this.options.change) {
+            this.options.change();
+        }
     }
-  }
 };
 
 /**
@@ -614,15 +631,15 @@ treemode._onUndo = function () {
  * @private
  */
 treemode._onRedo = function () {
-  if (this.history) {
-    // redo last action
-    this.history.redo();
+    if (this.history) {
+        // redo last action
+        this.history.redo();
 
-    // trigger change callback
-    if (this.options.change) {
-      this.options.change();
+        // trigger change callback
+        if (this.options.change) {
+            this.options.change();
+        }
     }
-  }
 };
 
 /**
@@ -631,20 +648,20 @@ treemode._onRedo = function () {
  * @private
  */
 treemode._onEvent = function (event) {
-  var target = event.target;
+    var target = event.target;
 
-  if (event.type == 'keydown') {
-    this._onKeyDown(event);
-  }
+    if (event.type == 'keydown') {
+        this._onKeyDown(event);
+    }
 
-  if (event.type == 'focus') {
-    domFocus = target;
-  }
+    if (event.type == 'focus') {
+        domFocus = target;
+    }
 
-  var node = Node.getNodeFromTarget(target);
-  if (node) {
-    node.onEvent(event);
-  }
+    var node = Node.getNodeFromTarget(target);
+    if (node) {
+        node.onEvent(event);
+    }
 };
 
 /**
@@ -653,56 +670,53 @@ treemode._onEvent = function (event) {
  * @private
  */
 treemode._onKeyDown = function (event) {
-  var keynum = event.which || event.keyCode;
-  var ctrlKey = event.ctrlKey;
-  var shiftKey = event.shiftKey;
-  var handled = false;
+    var keynum = event.which || event.keyCode;
+    var ctrlKey = event.ctrlKey;
+    var shiftKey = event.shiftKey;
+    var handled = false;
 
-  if (keynum == 9) { // Tab or Shift+Tab
-    setTimeout(function () {
-      // select all text when moving focus to an editable div
-      util.selectContentEditable(domFocus);
-    }, 0);
-  }
-
-  if (this.searchBox) {
-    if (ctrlKey && keynum == 70) { // Ctrl+F
-      this.searchBox.dom.search.focus();
-      this.searchBox.dom.search.select();
-      handled = true;
+    if (keynum == 9) { // Tab or Shift+Tab
+        setTimeout(function () {
+            // select all text when moving focus to an editable div
+            util.selectContentEditable(domFocus);
+        }, 0);
     }
-    else if (keynum == 114 || (ctrlKey && keynum == 71)) { // F3 or Ctrl+G
-      var focus = true;
-      if (!shiftKey) {
-        // select next search result (F3 or Ctrl+G)
-        this.searchBox.next(focus);
-      }
-      else {
-        // select previous search result (Shift+F3 or Ctrl+Shift+G)
-        this.searchBox.previous(focus);
-      }
 
-      handled = true;
-    }
-  }
+    if (this.searchBox) {
+        if (ctrlKey && keynum == 70) { // Ctrl+F
+            this.searchBox.dom.search.focus();
+            this.searchBox.dom.search.select();
+            handled = true;
+        } else if (keynum == 114 || (ctrlKey && keynum == 71)) { // F3 or Ctrl+G
+            var focus = true;
+            if (!shiftKey) {
+                // select next search result (F3 or Ctrl+G)
+                this.searchBox.next(focus);
+            } else {
+                // select previous search result (Shift+F3 or Ctrl+Shift+G)
+                this.searchBox.previous(focus);
+            }
 
-  if (this.history) {
-    if (ctrlKey && !shiftKey && keynum == 90) { // Ctrl+Z
-      // undo
-      this._onUndo();
-      handled = true;
+            handled = true;
+        }
     }
-    else if (ctrlKey && shiftKey && keynum == 90) { // Ctrl+Shift+Z
-      // redo
-      this._onRedo();
-      handled = true;
-    }
-  }
 
-  if (handled) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
+    if (this.history) {
+        if (ctrlKey && !shiftKey && keynum == 90) { // Ctrl+Z
+            // undo
+            this._onUndo();
+            handled = true;
+        } else if (ctrlKey && shiftKey && keynum == 90) { // Ctrl+Shift+Z
+            // redo
+            this._onRedo();
+            handled = true;
+        }
+    }
+
+    if (handled) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
 };
 
 /**
@@ -710,60 +724,55 @@ treemode._onKeyDown = function (event) {
  * @private
  */
 treemode._createTable = function () {
-  var contentOuter = document.createElement('div');
-  contentOuter.className = 'outer';
-  this.contentOuter = contentOuter;
+    var contentOuter = document.createElement('div');
+    contentOuter.className = 'outer';
+    this.contentOuter = contentOuter;
 
-  this.content = document.createElement('div');
-  this.content.className = 'tree';
-  contentOuter.appendChild(this.content);
+    this.content = document.createElement('div');
+    this.content.className = 'tree';
+    contentOuter.appendChild(this.content);
 
-  this.table = document.createElement('table');
-  this.table.className = 'tree';
-  this.content.appendChild(this.table);
+    this.table = document.createElement('table');
+    this.table.className = 'tree';
+    this.content.appendChild(this.table);
 
-  // create colgroup where the first two columns do have a fixed
-  // width, and the edit columns don't have a fixed width
-  var col;
-  this.colgroupContent = document.createElement('colgroup');
-  if (this.options.mode === 'tree') {
+    // create colgroup where the first two columns do have a fixed
+    // width, and the edit columns don't have a fixed width
+    var col;
+    this.colgroupContent = document.createElement('colgroup');
+    if (this.options.mode === 'tree') {
+        col = document.createElement('col');
+        col.width = "24px";
+        this.colgroupContent.appendChild(col);
+    }
     col = document.createElement('col');
     col.width = "24px";
     this.colgroupContent.appendChild(col);
-  }
-  col = document.createElement('col');
-  col.width = "24px";
-  this.colgroupContent.appendChild(col);
-  col = document.createElement('col');
-  this.colgroupContent.appendChild(col);
-  this.table.appendChild(this.colgroupContent);
+    col = document.createElement('col');
+    this.colgroupContent.appendChild(col);
+    this.table.appendChild(this.colgroupContent);
 
-  this.tbody = document.createElement('tbody');
-  this.table.appendChild(this.tbody);
+    this.tbody = document.createElement('tbody');
+    this.table.appendChild(this.tbody);
 
-  this.frame.appendChild(contentOuter);
+    this.frame.appendChild(contentOuter);
 };
 
 // define modes
-module.exports = [
-  {
+module.exports = [{
     mode: 'tree',
     mixin: treemode,
     data: 'json'
-  },
-  {
+}, {
     mode: 'view',
     mixin: treemode,
     data: 'json'
-  },
-  {
+}, {
     mode: 'form',
     mixin: treemode,
     data: 'json'
-  },
-  {
+}, {
     mode: 'checkbox',
     mixin: treemode,
     data: 'json'
-  }
-];
+}];

@@ -85,7 +85,7 @@ Node.prototype.path = function () {
  */
 Node.prototype.setParent = function (parent) {
     this.parent = parent;
-    this.parent._uncheckedChildren +=1;
+    this.parent._uncheckedChildren = this.parent.childs.length;
 };
 
 /**
@@ -1195,7 +1195,7 @@ Node.prototype.getDom = function () {
         checkbox.title = 'Click to select the menu (Ctrl+M)';
         checkbox.type = 'checkbox';
         checkbox.addEventListener('click', function () {
-            node._onCheck()
+            node._onCheck();
         });
         tdMenu.appendChild(dom.checkbox);
         dom.tr.appendChild(tdMenu);
@@ -2178,23 +2178,23 @@ Node.prototype._propup = function () {
         // only props up when it is fully checked
         // use checkbox state to determine prop up or not
         this.parent._checkedChildren += 1;
-        if(this.parent._checkedChildren >= this.parent.childs.length)
+        if (this.parent._checkedChildren >= this.parent.childs.length)
             this.parent._checkedChildren = this.parent.childs.length;
         this.parent._uncheckedChildren -= 1;
-        if (this.parent._uncheckedChildren <=0)
-            { this.parent._uncheckedChildren = 0; }
+        if (this.parent._uncheckedChildren <= 0)
+            this.parent._uncheckedChildren = 0;
     } else if (!this.dom.checkbox.checked && !this.dom.checkbox.indeterminate) {
         // when the node is not checked
         this.parent._checkedChildren -= 1;
         if (this.parent._checkedChildren <= 0)
-            { this.parent._checkedChildren = 0; }
+            this.parent._checkedChildren = 0;
 
         this.parent._uncheckedChildren += 1;
-        if(this.parent._uncheckedChildren >= this.parent.childs.length)
+        if (this.parent._uncheckedChildren >= this.parent.childs.length)
             this.parent._uncheckedChildren = this.parent.childs.length;
     }
 
-        console.log(this.parent._checkedChildren, this.parent._uncheckedChildren);
+    //console.log(this.parent._checkedChildren, this.parent._uncheckedChildren, this.parent.field);
     if (this.parent.childs.length === this.parent._checkedChildren) {
         this.parent.dom.checkbox.indeterminate = false;
         this.parent.dom.checkbox.checked = true;
@@ -2204,31 +2204,22 @@ Node.prototype._propup = function () {
     } else {
         this.parent.dom.checkbox.indeterminate = true;
     }
+    // HOTFIX
+    if (this.dom.checkbox.indeterminate) {
+        this.parent.dom.checkbox.indeterminate = true;
+    }
+
     this.parent._propup();
 };
 
 Node.prototype._onCheck = function () {
+    // propagate down
+    this._propdown();
+    //propagate up
+    this._propup();
 
-        // propagate down
-        this._propdown();
-
-    if (this.dom.checkbox.checked) { // when the node is checked
-        //console.log(this);
-
-
-        //propagate up
-        this._propup();
-
-        // save checked information
-        this.editor.setChecked(this);
-    } else { // when the node is unchecked
-
-        //propagate up
-        this._propup();
-
-        this.editor.setChecked(this);
-    }
-    //console.log("check");
+    // save checked information
+    this.editor.setChecked(this);
 };
 
 

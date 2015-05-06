@@ -7,16 +7,15 @@ var jsonlint = require('jsonlint');
  * @return {JSON} json
  */
 exports.parse = function parse(jsonString) {
-  try {
-    return JSON.parse(jsonString);
-  }
-  catch (err) {
-    // try to throw a more detailed error message using validate
-    exports.validate(jsonString);
+    try {
+        return JSON.parse(jsonString);
+    } catch (err) {
+        // try to throw a more detailed error message using validate
+        exports.validate(jsonString);
 
-    // rethrow the original error
-    throw err;
-  }
+        // rethrow the original error
+        throw err;
+    }
 };
 
 /**
@@ -28,123 +27,125 @@ exports.parse = function parse(jsonString) {
  * @returns {string} json
  */
 exports.sanitize = function (jsString) {
-  // escape all single and double quotes inside strings
-  var chars = [];
-  var i = 0;
+    // escape all single and double quotes inside strings
+    var chars = [];
+    var i = 0;
 
-  //If JSON starts with a function (characters/digits/"_-"), remove this function.
-  //This is useful for "stripping" JSONP objects to become JSON
-  //For example: /* some comment */ function_12321321 ( [{"a":"b"}] ); => [{"a":"b"}]
-  var match = jsString.match(/^\s*(\/\*(.|[\r\n])*?\*\/)?\s*[\da-zA-Z_$]+\s*\(([\s\S]*)\)\s*;?\s*$/);
-  if (match) {
-    jsString = match[3];
-  }
-
-  // helper functions to get the current/prev/next character
-  function curr () { return jsString.charAt(i);     }
-  function next()  { return jsString.charAt(i + 1); }
-  function prev()  { return jsString.charAt(i - 1); }
-
-  // test whether the last non-whitespace character was a brace-open '{'
-  function prevIsBrace() {
-    var ii = i - 1;
-    while (ii >= 0) {
-      var cc = jsString.charAt(ii);
-      if (cc === '{') {
-        return true;
-      }
-      else if (cc === ' ' || cc === '\n' || cc === '\r') { // whitespace
-        ii--;
-      }
-      else {
-        return false;
-      }
+    //If JSON starts with a function (characters/digits/"_-"), remove this function.
+    //This is useful for "stripping" JSONP objects to become JSON
+    //For example: /* some comment */ function_12321321 ( [{"a":"b"}] ); => [{"a":"b"}]
+    var match = jsString.match(/^\s*(\/\*(.|[\r\n])*?\*\/)?\s*[\da-zA-Z_$]+\s*\(([\s\S]*)\)\s*;?\s*$/);
+    if (match) {
+        jsString = match[3];
     }
-    return false;
-  }
 
-  // skip a block comment '/* ... */'
-  function skipComment () {
-    i += 2;
-    while (i < jsString.length && (curr() !== '*' || next() !== '/')) {
-      i++;
+    // helper functions to get the current/prev/next character
+    function curr() {
+        return jsString.charAt(i);
     }
-    i += 2;
-  }
 
-  // parse single or double quoted string
-  function parseString(quote) {
-    chars.push('"');
-    i++;
-    var c = curr();
-    while (i < jsString.length && c !== quote) {
-      if (c === '"' && prev() !== '\\') {
-        // unescaped double quote, escape it
-        chars.push('\\');
-      }
+    function next() {
+        return jsString.charAt(i + 1);
+    }
 
-      // handle escape character
-      if (c === '\\') {
-        i++;
-        c = curr();
+    function prev() {
+        return jsString.charAt(i - 1);
+    }
 
-        // remove the escape character when followed by a single quote ', not needed
-        if (c !== '\'') {
-          chars.push('\\');
+    // test whether the last non-whitespace character was a brace-open '{'
+    function prevIsBrace() {
+        var ii = i - 1;
+        while (ii >= 0) {
+            var cc = jsString.charAt(ii);
+            if (cc === '{') {
+                return true;
+            } else if (cc === ' ' || cc === '\n' || cc === '\r') { // whitespace
+                ii--;
+            } else {
+                return false;
+            }
         }
-      }
-      chars.push(c);
-
-      i++;
-      c = curr();
-    }
-    if (c === quote) {
-      chars.push('"');
-      i++;
-    }
-  }
-
-  // parse an unquoted key
-  function parseKey() {
-    var specialValues = ['null', 'true', 'false'];
-    var key = '';
-    var c = curr();
-
-    var regexp = /[a-zA-Z_$\d]/; // letter, number, underscore, dollar character
-    while (regexp.test(c)) {
-      key += c;
-      i++;
-      c = curr();
+        return false;
     }
 
-    if (specialValues.indexOf(key) === -1) {
-      chars.push('"' + key + '"');
+    // skip a block comment '/* ... */'
+    function skipComment() {
+        i += 2;
+        while (i < jsString.length && (curr() !== '*' || next() !== '/')) {
+            i++;
+        }
+        i += 2;
     }
-    else {
-      chars.push(key);
-    }
-  }
 
-  while(i < jsString.length) {
-    var c = curr();
+    // parse single or double quoted string
+    function parseString(quote) {
+        chars.push('"');
+        i++;
+        var c = curr();
+        while (i < jsString.length && c !== quote) {
+            if (c === '"' && prev() !== '\\') {
+                // unescaped double quote, escape it
+                chars.push('\\');
+            }
 
-    if (c === '/' && next() === '*') {
-      skipComment();
-    }
-    else if (c === '\'' || c === '"') {
-      parseString(c);
-    }
-    else if (/[a-zA-Z_$]/.test(c) && prevIsBrace()) {
-      // an unquoted object key (like a in '{a:2}')
-      parseKey();
-    }
-    else {
-      chars.push(c);
-      i++;
-    }
-  }
+            // handle escape character
+            if (c === '\\') {
+                i++;
+                c = curr();
 
-  return chars.join('');
+                // remove the escape character when followed by a single quote ', not needed
+                if (c !== '\'') {
+                    chars.push('\\');
+                }
+            }
+            chars.push(c);
+
+            i++;
+            c = curr();
+        }
+        if (c === quote) {
+            chars.push('"');
+            i++;
+        }
+    }
+
+    // parse an unquoted key
+    function parseKey() {
+        var specialValues = ['null', 'true', 'false'];
+        var key = '';
+        var c = curr();
+
+        var regexp = /[a-zA-Z_$\d]/; // letter, number, underscore, dollar character
+        while (regexp.test(c)) {
+            key += c;
+            i++;
+            c = curr();
+        }
+
+        if (specialValues.indexOf(key) === -1) {
+            chars.push('"' + key + '"');
+        } else {
+            chars.push(key);
+        }
+    }
+
+    while (i < jsString.length) {
+        var c = curr();
+
+        if (c === '/' && next() === '*') {
+            skipComment();
+        } else if (c === '\'' || c === '"') {
+            parseString(c);
+        } else if (/[a-zA-Z_$]/.test(c) && prevIsBrace()) {
+            // an unquoted object key (like a in '{a:2}')
+            parseKey();
+        } else {
+            chars.push(c);
+            i++;
+        }
+    }
+
+    return chars.join('');
 };
 
 /**
@@ -155,12 +156,11 @@ exports.sanitize = function (jsString) {
  * @throws Error
  */
 exports.validate = function validate(jsonString) {
-  if (typeof(jsonlint) != 'undefined') {
-    jsonlint.parse(jsonString);
-  }
-  else {
-    JSON.parse(jsonString);
-  }
+    if (typeof (jsonlint) != 'undefined') {
+        jsonlint.parse(jsonString);
+    } else {
+        JSON.parse(jsonString);
+    }
 };
 
 /**
@@ -170,36 +170,86 @@ exports.validate = function validate(jsonString) {
  * @return {Object} a
  */
 exports.extend = function extend(a, b) {
-  for (var prop in b) {
-    if (b.hasOwnProperty(prop)) {
-      a[prop] = b[prop];
+    for (var prop in b) {
+        if (b.hasOwnProperty(prop)) {
+            a[prop] = b[prop];
+        }
     }
-  }
-  return a;
+    return a;
 };
+
+/**
+ * delete a property in an object with a given path
+ * @param {Object} obj
+ * @param {Array} path
+ * @return {Object} root
+ */
+exports.deleteNested = function (obj /*, path*/ ) {
+    var root = obj;
+    var args = arguments[1];
+
+    // when root is unchecked, set treemode.checked to {}
+    if (args.length === 0) return {};
+
+    // first find that key, then delete it
+    for (var i = 0, n = args.length - 1; i < n; i++) {
+        //console.log(obj);
+        obj = obj[args[i]];
+    }
+    delete obj[args[i]];
+    // second get rid of the empty contents
+
+    return root;
+};
+
+function clearEmpty(obj) { // not checking {} as arg for purpose.
+    for (var prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+            // delete empty properties
+            if (typeof obj[prop] === 'object' && obj[prop] !== null) {
+                if (Object.getOwnPropertyNames(obj[prop]).length === 0) {
+                    delete obj[prop];
+                }
+                clearEmpty(obj[prop]);
+            }
+        }
+    }
+}
+
+var x = {
+    test: {
+        y:2,
+        empty:{
+            test:{}
+        }
+    },
+    x: 1
+};
+clearEmpty(x);
+console.log(x);
 
 /**
  * Remove all properties from object a
  * @param {Object} a
  * @return {Object} a
  */
-exports.clear = function clear (a) {
-  for (var prop in a) {
-    if (a.hasOwnProperty(prop)) {
-      delete a[prop];
+exports.clear = function clear(a) {
+    for (var prop in a) {
+        if (a.hasOwnProperty(prop)) {
+            delete a[prop];
+        }
     }
-  }
-  return a;
+    return a;
 };
 
 /**
  * Output text to the console, if console is available
  * @param {...*} args
  */
-exports.log = function log (args) {
-  if (typeof console !== 'undefined' && typeof console.log === 'function') {
-    console.log.apply(console, arguments);
-  }
+exports.log = function log(args) {
+    if (typeof console !== 'undefined' && typeof console.log === 'function') {
+        console.log.apply(console, arguments);
+    }
 };
 
 /**
@@ -207,30 +257,30 @@ exports.log = function log (args) {
  * @param {*} object
  * @return {String} type
  */
-exports.type = function type (object) {
-  if (object === null) {
-    return 'null';
-  }
-  if (object === undefined) {
-    return 'undefined';
-  }
-  if ((object instanceof Number) || (typeof object === 'number')) {
-    return 'number';
-  }
-  if ((object instanceof String) || (typeof object === 'string')) {
-    return 'string';
-  }
-  if ((object instanceof Boolean) || (typeof object === 'boolean')) {
-    return 'boolean';
-  }
-  if ((object instanceof RegExp) || (typeof object === 'regexp')) {
-    return 'regexp';
-  }
-  if (exports.isArray(object)) {
-    return 'array';
-  }
+exports.type = function type(object) {
+    if (object === null) {
+        return 'null';
+    }
+    if (object === undefined) {
+        return 'undefined';
+    }
+    if ((object instanceof Number) || (typeof object === 'number')) {
+        return 'number';
+    }
+    if ((object instanceof String) || (typeof object === 'string')) {
+        return 'string';
+    }
+    if ((object instanceof Boolean) || (typeof object === 'boolean')) {
+        return 'boolean';
+    }
+    if ((object instanceof RegExp) || (typeof object === 'regexp')) {
+        return 'regexp';
+    }
+    if (exports.isArray(object)) {
+        return 'array';
+    }
 
-  return 'object';
+    return 'object';
 };
 
 /**
@@ -239,9 +289,9 @@ exports.type = function type (object) {
  * @param {String} text
  */
 var isUrlRegex = /^https?:\/\/\S+$/;
-exports.isUrl = function isUrl (text) {
-  return (typeof text == 'string' || text instanceof String) &&
-      isUrlRegex.test(text);
+exports.isUrl = function isUrl(text) {
+    return (typeof text == 'string' || text instanceof String) &&
+        isUrlRegex.test(text);
 };
 
 /**
@@ -250,7 +300,7 @@ exports.isUrl = function isUrl (text) {
  * @returns {boolean} returns true when obj is an array
  */
 exports.isArray = function (obj) {
-  return Object.prototype.toString.call(obj) === '[object Array]';
+    return Object.prototype.toString.call(obj) === '[object Array]';
 };
 
 /**
@@ -260,8 +310,8 @@ exports.isArray = function (obj) {
  *                          in the browser page.
  */
 exports.getAbsoluteLeft = function getAbsoluteLeft(elem) {
-  var rect = elem.getBoundingClientRect();
-  return rect.left + window.pageXOffset || document.scrollLeft || 0;
+    var rect = elem.getBoundingClientRect();
+    return rect.left + window.pageXOffset || document.scrollLeft || 0;
 };
 
 /**
@@ -271,8 +321,8 @@ exports.getAbsoluteLeft = function getAbsoluteLeft(elem) {
  *                          in the browser page.
  */
 exports.getAbsoluteTop = function getAbsoluteTop(elem) {
-  var rect = elem.getBoundingClientRect();
-  return rect.top + window.pageYOffset || document.scrollTop || 0;
+    var rect = elem.getBoundingClientRect();
+    return rect.top + window.pageYOffset || document.scrollTop || 0;
 };
 
 /**
@@ -281,11 +331,11 @@ exports.getAbsoluteTop = function getAbsoluteTop(elem) {
  * @param {String} className
  */
 exports.addClassName = function addClassName(elem, className) {
-  var classes = elem.className.split(' ');
-  if (classes.indexOf(className) == -1) {
-    classes.push(className); // add the class to the array
-    elem.className = classes.join(' ');
-  }
+    var classes = elem.className.split(' ');
+    if (classes.indexOf(className) == -1) {
+        classes.push(className); // add the class to the array
+        elem.className = classes.join(' ');
+    }
 };
 
 /**
@@ -294,12 +344,12 @@ exports.addClassName = function addClassName(elem, className) {
  * @param {String} className
  */
 exports.removeClassName = function removeClassName(elem, className) {
-  var classes = elem.className.split(' ');
-  var index = classes.indexOf(className);
-  if (index != -1) {
-    classes.splice(index, 1); // remove the class from the array
-    elem.className = classes.join(' ');
-  }
+    var classes = elem.className.split(' ');
+    var index = classes.indexOf(className);
+    if (index != -1) {
+        classes.splice(index, 1); // remove the class from the array
+        elem.className = classes.join(' ');
+    }
 };
 
 /**
@@ -308,30 +358,30 @@ exports.removeClassName = function removeClassName(elem, className) {
  * @param {Element} divElement
  */
 exports.stripFormatting = function stripFormatting(divElement) {
-  var childs = divElement.childNodes;
-  for (var i = 0, iMax = childs.length; i < iMax; i++) {
-    var child = childs[i];
+    var childs = divElement.childNodes;
+    for (var i = 0, iMax = childs.length; i < iMax; i++) {
+        var child = childs[i];
 
-    // remove the style
-    if (child.style) {
-      // TODO: test if child.attributes does contain style
-      child.removeAttribute('style');
-    }
-
-    // remove all attributes
-    var attributes = child.attributes;
-    if (attributes) {
-      for (var j = attributes.length - 1; j >= 0; j--) {
-        var attribute = attributes[j];
-        if (attribute.specified === true) {
-          child.removeAttribute(attribute.name);
+        // remove the style
+        if (child.style) {
+            // TODO: test if child.attributes does contain style
+            child.removeAttribute('style');
         }
-      }
-    }
 
-    // recursively strip childs
-    exports.stripFormatting(child);
-  }
+        // remove all attributes
+        var attributes = child.attributes;
+        if (attributes) {
+            for (var j = attributes.length - 1; j >= 0; j--) {
+                var attribute = attributes[j];
+                if (attribute.specified === true) {
+                    child.removeAttribute(attribute.name);
+                }
+            }
+        }
+
+        // recursively strip childs
+        exports.stripFormatting(child);
+    }
 };
 
 /**
@@ -342,15 +392,15 @@ exports.stripFormatting = function stripFormatting(divElement) {
  * @param {Element} contentEditableElement   A content editable div
  */
 exports.setEndOfContentEditable = function setEndOfContentEditable(contentEditableElement) {
-  var range, selection;
-  if(document.createRange) {
-    range = document.createRange();//Create a range (a range is a like the selection but invisible)
-    range.selectNodeContents(contentEditableElement);//Select the entire contents of the element with the range
-    range.collapse(false);//collapse the range to the end point. false means collapse to end rather than the start
-    selection = window.getSelection();//get the selection object (allows you to change selection)
-    selection.removeAllRanges();//remove any selections already made
-    selection.addRange(range);//make the range you have just created the visible selection
-  }
+    var range, selection;
+    if (document.createRange) {
+        range = document.createRange(); //Create a range (a range is a like the selection but invisible)
+        range.selectNodeContents(contentEditableElement); //Select the entire contents of the element with the range
+        range.collapse(false); //collapse the range to the end point. false means collapse to end rather than the start
+        selection = window.getSelection(); //get the selection object (allows you to change selection)
+        selection.removeAllRanges(); //remove any selections already made
+        selection.addRange(range); //make the range you have just created the visible selection
+    }
 };
 
 /**
@@ -359,18 +409,18 @@ exports.setEndOfContentEditable = function setEndOfContentEditable(contentEditab
  * @param {Element} contentEditableElement   A content editable div
  */
 exports.selectContentEditable = function selectContentEditable(contentEditableElement) {
-  if (!contentEditableElement || contentEditableElement.nodeName != 'DIV') {
-    return;
-  }
+    if (!contentEditableElement || contentEditableElement.nodeName != 'DIV') {
+        return;
+    }
 
-  var sel, range;
-  if (window.getSelection && document.createRange) {
-    range = document.createRange();
-    range.selectNodeContents(contentEditableElement);
-    sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
+    var sel, range;
+    if (window.getSelection && document.createRange) {
+        range = document.createRange();
+        range.selectNodeContents(contentEditableElement);
+        sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
 };
 
 /**
@@ -379,13 +429,13 @@ exports.selectContentEditable = function selectContentEditable(contentEditableEl
  * @return {Range | TextRange | null} range
  */
 exports.getSelection = function getSelection() {
-  if (window.getSelection) {
-    var sel = window.getSelection();
-    if (sel.getRangeAt && sel.rangeCount) {
-      return sel.getRangeAt(0);
+    if (window.getSelection) {
+        var sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+            return sel.getRangeAt(0);
+        }
     }
-  }
-  return null;
+    return null;
 };
 
 /**
@@ -394,13 +444,13 @@ exports.getSelection = function getSelection() {
  * @param {Range | TextRange | null} range
  */
 exports.setSelection = function setSelection(range) {
-  if (range) {
-    if (window.getSelection) {
-      var sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
+    if (range) {
+        if (window.getSelection) {
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
     }
-  }
 };
 
 /**
@@ -413,18 +463,18 @@ exports.setSelection = function setSelection(range) {
  *                          Returns null if no text selection is found
  */
 exports.getSelectionOffset = function getSelectionOffset() {
-  var range = exports.getSelection();
+    var range = exports.getSelection();
 
-  if (range && 'startOffset' in range && 'endOffset' in range &&
-      range.startContainer && (range.startContainer == range.endContainer)) {
-    return {
-      startOffset: range.startOffset,
-      endOffset: range.endOffset,
-      container: range.startContainer.parentNode
-    };
-  }
+    if (range && 'startOffset' in range && 'endOffset' in range &&
+        range.startContainer && (range.startContainer == range.endContainer)) {
+        return {
+            startOffset: range.startOffset,
+            endOffset: range.endOffset,
+            container: range.startContainer.parentNode
+        };
+    }
 
-  return null;
+    return null;
 };
 
 /**
@@ -435,18 +485,18 @@ exports.getSelectionOffset = function getSelectionOffset() {
  *                              {Number} endOffset
  */
 exports.setSelectionOffset = function setSelectionOffset(params) {
-  if (document.createRange && window.getSelection) {
-    var selection = window.getSelection();
-    if(selection) {
-      var range = document.createRange();
-      // TODO: do not suppose that the first child of the container is a textnode,
-      //       but recursively find the textnodes
-      range.setStart(params.container.firstChild, params.startOffset);
-      range.setEnd(params.container.firstChild, params.endOffset);
+    if (document.createRange && window.getSelection) {
+        var selection = window.getSelection();
+        if (selection) {
+            var range = document.createRange();
+            // TODO: do not suppose that the first child of the container is a textnode,
+            //       but recursively find the textnodes
+            range.setStart(params.container.firstChild, params.startOffset);
+            range.setEnd(params.container.firstChild, params.endOffset);
 
-      exports.setSelection(range);
+            exports.setSelection(range);
+        }
     }
-  }
 };
 
 /**
@@ -456,68 +506,65 @@ exports.setSelectionOffset = function setSelectionOffset(params) {
  * @return {String} innerText
  */
 exports.getInnerText = function getInnerText(element, buffer) {
-  var first = (buffer == undefined);
-  if (first) {
-    buffer = {
-      'text': '',
-      'flush': function () {
-        var text = this.text;
-        this.text = '';
-        return text;
-      },
-      'set': function (text) {
-        this.text = text;
-      }
-    };
-  }
+    var first = (buffer == undefined);
+    if (first) {
+        buffer = {
+            'text': '',
+            'flush': function () {
+                var text = this.text;
+                this.text = '';
+                return text;
+            },
+            'set': function (text) {
+                this.text = text;
+            }
+        };
+    }
 
-  // text node
-  if (element.nodeValue) {
-    return buffer.flush() + element.nodeValue;
-  }
+    // text node
+    if (element.nodeValue) {
+        return buffer.flush() + element.nodeValue;
+    }
 
-  // divs or other HTML elements
-  if (element.hasChildNodes()) {
-    var childNodes = element.childNodes;
-    var innerText = '';
+    // divs or other HTML elements
+    if (element.hasChildNodes()) {
+        var childNodes = element.childNodes;
+        var innerText = '';
 
-    for (var i = 0, iMax = childNodes.length; i < iMax; i++) {
-      var child = childNodes[i];
+        for (var i = 0, iMax = childNodes.length; i < iMax; i++) {
+            var child = childNodes[i];
 
-      if (child.nodeName == 'DIV' || child.nodeName == 'P') {
-        var prevChild = childNodes[i - 1];
-        var prevName = prevChild ? prevChild.nodeName : undefined;
-        if (prevName && prevName != 'DIV' && prevName != 'P' && prevName != 'BR') {
-          innerText += '\n';
-          buffer.flush();
+            if (child.nodeName == 'DIV' || child.nodeName == 'P') {
+                var prevChild = childNodes[i - 1];
+                var prevName = prevChild ? prevChild.nodeName : undefined;
+                if (prevName && prevName != 'DIV' && prevName != 'P' && prevName != 'BR') {
+                    innerText += '\n';
+                    buffer.flush();
+                }
+                innerText += exports.getInnerText(child, buffer);
+                buffer.set('\n');
+            } else if (child.nodeName == 'BR') {
+                innerText += buffer.flush();
+                buffer.set('\n');
+            } else {
+                innerText += exports.getInnerText(child, buffer);
+            }
         }
-        innerText += exports.getInnerText(child, buffer);
-        buffer.set('\n');
-      }
-      else if (child.nodeName == 'BR') {
-        innerText += buffer.flush();
-        buffer.set('\n');
-      }
-      else {
-        innerText += exports.getInnerText(child, buffer);
-      }
+
+        return innerText;
+    } else {
+        if (element.nodeName == 'P' && exports.getInternetExplorerVersion() != -1) {
+            // On Internet Explorer, a <p> with hasChildNodes()==false is
+            // rendered with a new line. Note that a <p> with
+            // hasChildNodes()==true is rendered without a new line
+            // Other browsers always ensure there is a <br> inside the <p>,
+            // and if not, the <p> does not render a new line
+            return buffer.flush();
+        }
     }
 
-    return innerText;
-  }
-  else {
-    if (element.nodeName == 'P' && exports.getInternetExplorerVersion() != -1) {
-      // On Internet Explorer, a <p> with hasChildNodes()==false is
-      // rendered with a new line. Note that a <p> with
-      // hasChildNodes()==true is rendered without a new line
-      // Other browsers always ensure there is a <br> inside the <p>,
-      // and if not, the <p> does not render a new line
-      return buffer.flush();
-    }
-  }
-
-  // br or unknown
-  return '';
+    // br or unknown
+    return '';
 };
 
 /**
@@ -527,29 +574,28 @@ exports.getInnerText = function getInnerText(element, buffer) {
  * @return {Number} Internet Explorer version, or -1 in case of an other browser
  */
 exports.getInternetExplorerVersion = function getInternetExplorerVersion() {
-  if (_ieVersion == -1) {
-    var rv = -1; // Return value assumes failure.
-    if (navigator.appName == 'Microsoft Internet Explorer')
-    {
-      var ua = navigator.userAgent;
-      var re  = new RegExp("MSIE ([0-9]{1,}[\.0-9]{0,})");
-      if (re.exec(ua) != null) {
-        rv = parseFloat( RegExp.$1 );
-      }
+    if (_ieVersion == -1) {
+        var rv = -1; // Return value assumes failure.
+        if (navigator.appName == 'Microsoft Internet Explorer') {
+            var ua = navigator.userAgent;
+            var re = new RegExp("MSIE ([0-9]{1,}[\.0-9]{0,})");
+            if (re.exec(ua) != null) {
+                rv = parseFloat(RegExp.$1);
+            }
+        }
+
+        _ieVersion = rv;
     }
 
-    _ieVersion = rv;
-  }
-
-  return _ieVersion;
+    return _ieVersion;
 };
 
 /**
  * Test whether the current browser is Firefox
  * @returns {boolean} isFirefox
  */
-exports.isFirefox = function isFirefox () {
-  return (navigator.userAgent.indexOf("Firefox") != -1);
+exports.isFirefox = function isFirefox() {
+    return (navigator.userAgent.indexOf("Firefox") != -1);
 };
 
 /**
@@ -569,24 +615,24 @@ var _ieVersion = -1;
  * @return {function}   the created event listener
  */
 exports.addEventListener = function addEventListener(element, action, listener, useCapture) {
-  if (element.addEventListener) {
-    if (useCapture === undefined)
-      useCapture = false;
+    if (element.addEventListener) {
+        if (useCapture === undefined)
+            useCapture = false;
 
-    if (action === "mousewheel" && exports.isFirefox()) {
-      action = "DOMMouseScroll";  // For Firefox
+        if (action === "mousewheel" && exports.isFirefox()) {
+            action = "DOMMouseScroll"; // For Firefox
+        }
+
+        element.addEventListener(action, listener, useCapture);
+        return listener;
+    } else if (element.attachEvent) {
+        // Old IE browsers
+        var f = function () {
+            return listener.call(element, window.event);
+        };
+        element.attachEvent("on" + action, f);
+        return f;
     }
-
-    element.addEventListener(action, listener, useCapture);
-    return listener;
-  } else if (element.attachEvent) {
-    // Old IE browsers
-    var f = function () {
-      return listener.call(element, window.event);
-    };
-    element.attachEvent("on" + action, f);
-    return f;
-  }
 };
 
 /**
@@ -597,17 +643,17 @@ exports.addEventListener = function addEventListener(element, action, listener, 
  * @param {boolean}  [useCapture]   false by default
  */
 exports.removeEventListener = function removeEventListener(element, action, listener, useCapture) {
-  if (element.removeEventListener) {
-    if (useCapture === undefined)
-      useCapture = false;
+    if (element.removeEventListener) {
+        if (useCapture === undefined)
+            useCapture = false;
 
-    if (action === "mousewheel" && exports.isFirefox()) {
-      action = "DOMMouseScroll";  // For Firefox
+        if (action === "mousewheel" && exports.isFirefox()) {
+            action = "DOMMouseScroll"; // For Firefox
+        }
+
+        element.removeEventListener(action, listener, useCapture);
+    } else if (element.detachEvent) {
+        // Old IE browsers
+        element.detachEvent("on" + action, listener);
     }
-
-    element.removeEventListener(action, listener, useCapture);
-  } else if (element.detachEvent) {
-    // Old IE browsers
-    element.detachEvent("on" + action, listener);
-  }
 };

@@ -1,0 +1,95 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <link href="./jsoneditor/dist/jsoneditor.css" rel="stylesheet" type="text/css">
+    <link href="./ZingGrid-test-website/ZingGrid-Dev/zing/build/css/zg-min.css" rel="stylesheet" type="text/css">
+    <script src="./jsoneditor/dist/jsoneditor.js"></script>
+    <script src="./ZingGrid-test-website/ZingGrid-Dev/zing/build/zg-min.js"></script>
+    <style type="text/css">
+        .editor {
+            display: inline-block
+        }
+    </style>
+</head>
+
+<body>
+    <div id="checkboxEditor" class="editor" style="width: 400px; height: 400px;"></div>
+    <div id="codeEditor" class="editor" style="width: 400px; height: 400px;"></div>
+    <!--<button id='generateBtn'>getChecked()</button>-->
+    <div id="zinggrid" style="width: 800px; height: 400px;"></div>
+    <script>
+        // create the editor
+        var inputContainer = document.getElementById("checkboxEditor");
+        var outputContainer = document.getElementById("codeEditor");
+        var outputJson = {};
+        var inputEditor = new JSONEditor(inputContainer, {
+            mode: "tree",
+            modes: ["tree", "code", "view", "form"], // menu
+            change: function() {},
+            error: function() {
+                console.log("error!")
+            },
+            name: "ZingGrid Root",
+            //indentation: 2, //default
+            //history: true, //default
+
+        });
+
+        var outputEditor = new JSONEditor(outputContainer, {
+            mode: "code",
+            modes: ["tree", "code", "view", "form"], // menu
+            change: function() {},
+            error: function() {
+                console.log("error!")
+            },
+
+        });
+
+        // set json
+        var json = {
+            "data": [
+                [1, 2, 3]
+            ],
+            "width": 800,
+            "height": 500,
+            "grid": {
+                header: {},
+                body: {}
+            },
+        };
+        inputEditor.set(json);
+        inputEditor.expandAll();
+
+        var checkboxes = document.querySelectorAll('input[type="checkbox"]')
+        Array.prototype.forEach.call(checkboxes, function(n) {
+            n.addEventListener('click', function() {
+                outputJson = inputEditor.getChecked();
+                outputJson.id = "zinggrid";
+                outputEditor.set(outputJson);
+
+                document.getElementById('zinggrid').innerHTML = '';
+
+
+                // House cleaning extra dummy dom elements
+                Array.prototype.forEach.call(
+                    document.querySelectorAll('textarea'),
+                    function(extraNode) {
+                        extraNode.parentNode.removeChild(extraNode)
+                    });
+                Array.prototype.forEach.call(
+                    document.querySelectorAll('div[class^="zg-load-mask"]'),
+                    function(extraNode) {
+                        extraNode.parentNode.removeChild(extraNode)
+                    });
+
+                //zinggrid.render(outputJson);
+
+            });
+        })
+
+        //console.log(outputJson);
+    </script>
+</body>
+
+</html>

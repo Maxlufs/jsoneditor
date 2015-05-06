@@ -25,6 +25,7 @@
     "jsonlint": "josdejong/jsonlint#fb47330"
   },
   "devDependencies": {
+    "browser-sync": "^2.7.1",
     "gulp": "^3.8.11",
     "gulp-concat-css": "^2.0.0",
     "gulp-minify-css": "^0.4.5",

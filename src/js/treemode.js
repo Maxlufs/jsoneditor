@@ -357,41 +357,44 @@ treemode.stopAutoScroll = function () {
 
 treemode.setChecked = function (node) {
     //console.log("Set checked!!!!!!!!!!!!!!");
-    var o = {},
-        key, value;
-    var curr = node;
+    //var o = {},
+        //key, value;
+    //var curr = node;
 
-    // dummy {key:value} pair
-    key = node.field || node.index;
-    value = node.getValue();
-    o[key] = value;
+    //// dummy {key:value} pair
+    //key = node.field || node.index;
+    //value = node.getValue();
+    //o[key] = value;
 
-    var path = [];
-    var output = o;
-    if (!node.parent) { //check on root node, select the entire tree
-        path = [];
-        output = value;
+    //var path = [];
+    //var output = o;
+    //if (!node.parent) { //check on root node, select the entire tree
+        //path = [];
+        //output = value;
+    //} else {
+        //while (node.parent.parent) { // build the path of the current node
+            //var par = node.parent;
+            //var parKey = par.field || par.index;
+            //path.push(parKey);
+            //// wrap the output with parent's key, add one more step to path
+            //var p = {};
+            //p[parKey] = output;
+            //output = p;
+            //node = node.parent;
+        //}
+        //path.unshift(key); // push the current node's key/index
+        ////console.log(path.reverse());
+    //}
+
+
+    if (node.dom.checkbox.checked) { // if checking the checkbox
+        console.log(node.jsonOnPath())
+        this.checked = util.deepExtend(this.checked, node.jsonOnPath());
     } else {
-        while (node.parent.parent) { // build the path of the current node
-            var par = node.parent;
-            var parKey = par.field || par.index;
-            path.push(parKey);
-            // wrap the output with parent's key, add one more step to path
-            var p = {};
-            p[parKey] = output;
-            output = p;
-            node = node.parent;
-        }
-        path.unshift(key); // push the current node's key/index
-        //console.log(path.reverse());
-    }
-
-
-    if (curr.dom.checkbox.checked) { // if checking the checkbox
-        this.checked = util.extend(this.checked, output);
-    } else {
-        this.checked = util.deleteNested(this.checked, path.reverse());
-        console.log(this.checked);
+        var path = node.path();
+        path.shift(); // getting rid of root name
+        this.checked = util.deepDelete(this.checked, path);
+        //console.log(this.checked);
     }
 };
 

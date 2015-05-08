@@ -79,12 +79,43 @@ Node.prototype.path = function () {
     return path;
 };
 
+Node.prototype.jsonOnPath = function () {
+    var path = this.path();
+    path.shift(); // get rid of the root name
+
+    // iterate over path, create empty object along the way
+    var root;
+    if(typeof path[0] === "number")
+        root = [];
+    else if(typeof path[0] === "string")
+        root = {};
+
+    var curr = root;
+    var currKey,nextKey;
+
+    for (var i = 0, n = path.length; i<n;i++){
+        currKey = path[i];
+        nextKey = path[i+1];
+        if(typeof nextKey === "number")
+            curr[currKey] = [];
+        else if(typeof nextKey === "string")
+            curr[currKey] = {};
+        else if (typeof nextKey === "undefined")
+            curr[currKey] = this.getValue();
+        curr = curr[currKey];
+    }
+
+
+    return root;
+};
+
 /**
  * Set parent node
  * @param {Node} parent
  */
 Node.prototype.setParent = function (parent) {
     this.parent = parent;
+    // set counter of unchecked children
     this.parent._uncheckedChildren = this.parent.childs.length;
 };
 

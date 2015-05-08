@@ -24,7 +24,7 @@
  *
  * @author  Jos de Jong, <wjosdejong@gmail.com>
  * @version 4.1.3
- * @date    2015-05-06
+ * @date    2015-05-07
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -738,41 +738,44 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	treemode.setChecked = function (node) {
 	    //console.log("Set checked!!!!!!!!!!!!!!");
-	    var o = {},
-	        key, value;
-	    var curr = node;
+	    //var o = {},
+	        //key, value;
+	    //var curr = node;
 
-	    // dummy {key:value} pair
-	    key = node.field || node.index;
-	    value = node.getValue();
-	    o[key] = value;
+	    //// dummy {key:value} pair
+	    //key = node.field || node.index;
+	    //value = node.getValue();
+	    //o[key] = value;
 
-	    var path = [];
-	    var output = o;
-	    if (!node.parent) { //check on root node, select the entire tree
-	        path = [];
-	        output = value;
+	    //var path = [];
+	    //var output = o;
+	    //if (!node.parent) { //check on root node, select the entire tree
+	        //path = [];
+	        //output = value;
+	    //} else {
+	        //while (node.parent.parent) { // build the path of the current node
+	            //var par = node.parent;
+	            //var parKey = par.field || par.index;
+	            //path.push(parKey);
+	            //// wrap the output with parent's key, add one more step to path
+	            //var p = {};
+	            //p[parKey] = output;
+	            //output = p;
+	            //node = node.parent;
+	        //}
+	        //path.unshift(key); // push the current node's key/index
+	        ////console.log(path.reverse());
+	    //}
+
+
+	    if (node.dom.checkbox.checked) { // if checking the checkbox
+	        console.log(node.jsonOnPath())
+	        this.checked = util.deepExtend(this.checked, node.jsonOnPath());
 	    } else {
-	        while (node.parent.parent) { // build the path of the current node
-	            var par = node.parent;
-	            var parKey = par.field || par.index;
-	            path.push(parKey);
-	            // wrap the output with parent's key, add one more step to path
-	            var p = {};
-	            p[parKey] = output;
-	            output = p;
-	            node = node.parent;
-	        }
-	        path.unshift(key); // push the current node's key/index
-	        //console.log(path.reverse());
-	    }
-
-
-	    if (curr.dom.checkbox.checked) { // if checking the checkbox
-	        this.checked = util.extend(this.checked, output);
-	    } else {
-	        this.checked = util.deleteNested(this.checked, path.reverse());
-	        console.log(this.checked);
+	        var path = node.path();
+	        path.shift(); // getting rid of root name
+	        this.checked = util.deepDelete(this.checked, path);
+	        //console.log(this.checked);
 	    }
 	};
 
@@ -1512,7 +1515,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var jsonlint = __webpack_require__(19);
+	var jsonlint = __webpack_require__(10);
 
 	/**
 	 * Parse JSON using the parser built-in in the browser.
@@ -1692,55 +1695,71 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return a;
 	};
 
+	exports.deepExtend = function(destination, source) {
+	  for (var property in source) {
+	    if (source[property] && source[property].constructor &&
+	     source[property].constructor === Object) {
+	      destination[property] = destination[property] || {};
+	      arguments.callee(destination[property], source[property]);
+	    } else {
+	      destination[property] = source[property];
+	    }
+	  }
+	  return destination;
+	};
+
 	/**
 	 * delete a property in an object with a given path
 	 * @param {Object} obj
 	 * @param {Array} path
 	 * @return {Object} root
 	 */
-	exports.deleteNested = function (obj /*, path*/ ) {
+	exports.deepDelete = function (obj /*, path*/ ) {
 	    var root = obj;
-	    var args = arguments[1];
+	    // keep a pointer to point at root
+	    var path = arguments[1];
+	    // path
 
+	    //console.log(path);
 	    // when root is unchecked, set treemode.checked to {}
-	    if (args.length === 0) return {};
+	    if (path.length === 0) return {};
 
 	    // first find that key, then delete it
-	    for (var i = 0, n = args.length - 1; i < n; i++) {
+	    for (var i = 0, n = path.length - 1; i < n; i++) {
 	        //console.log(obj);
-	        obj = obj[args[i]];
+	        obj = obj[path[i]];
 	    }
-	    delete obj[args[i]];
+	    delete obj[path[i]];
 	    // second get rid of the empty contents
-
+	    //console.log(root);
+	    deepClearEmpty(root);
 	    return root;
 	};
 
-	function clearEmpty(obj) { // not checking {} as arg for purpose.
+	// remove the empty contents inside an object set a flag isEmpty, if any
+	// children is non-empty, set it to false and pass up to parent otherwise,
+	// consider the parent's isEmpty flag is true, since all its children are empty
+	// The function returns the boolean flag
+	var deepClearEmpty = function (obj) {
+	    if (typeof obj !== "object" || obj === null) return false; // primitive types and null
+	    if (obj instanceof Array && obj.length === 0) return true; // []
+	    if (!obj.length && Object.keys(obj).length === 0) return true; // {}
+
+	    var isEmpty = true;
 	    for (var prop in obj) {
 	        if (obj.hasOwnProperty(prop)) {
-	            // delete empty properties
-	            if (typeof obj[prop] === 'object' && obj[prop] !== null) {
-	                if (Object.getOwnPropertyNames(obj[prop]).length === 0) {
-	                    delete obj[prop];
-	                }
-	                clearEmpty(obj[prop]);
+	            var child = obj[prop];
+	            // child is the value, obj[prop] is the pointer
+	            //deepClearEmpty(child) ? delete obj[prop] : isEmpty = false;
+	            if (deepClearEmpty(child)) {
+	                delete obj[prop];
+	            } else {
+	                isEmpty = false;
 	            }
 	        }
 	    }
-	}
-
-	var x = {
-	    test: {
-	        y:2,
-	        empty:{
-	            test:{}
-	        }
-	    },
-	    x: 1
+	    return isEmpty;
 	};
-	clearEmpty(x);
-	console.log(x);
 
 	/**
 	 * Remove all properties from object a
@@ -2789,8 +2808,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ContextMenu = __webpack_require__(10);
-	var appendNodeFactory = __webpack_require__(11);
+	var ContextMenu = __webpack_require__(11);
+	var appendNodeFactory = __webpack_require__(19);
 	var util = __webpack_require__(3);
 
 	/**
@@ -2870,12 +2889,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return path;
 	};
 
+	Node.prototype.jsonOnPath = function () {
+	    var path = this.path();
+	    path.shift(); // get rid of the root name
+
+	    // iterate over path, create empty object along the way
+	    var root;
+	    if(typeof path[0] === "number")
+	        root = [];
+	    else if(typeof path[0] === "string")
+	        root = {};
+
+	    var curr = root;
+	    var currKey,nextKey;
+
+	    for (var i = 0, n = path.length; i<n;i++){
+	        currKey = path[i];
+	        nextKey = path[i+1];
+	        if(typeof nextKey === "number")
+	            curr[currKey] = [];
+	        else if(typeof nextKey === "string")
+	            curr[currKey] = {};
+	        else if (typeof nextKey === "undefined")
+	            curr[currKey] = this.getValue();
+	        curr = curr[currKey];
+	    }
+
+
+	    return root;
+	};
+
 	/**
 	 * Set parent node
 	 * @param {Node} parent
 	 */
 	Node.prototype.setParent = function (parent) {
 	    this.parent = parent;
+	    // set counter of unchecked children
 	    this.parent._uncheckedChildren = this.parent.childs.length;
 	};
 
@@ -5702,7 +5752,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ContextMenu = __webpack_require__(10);
+	var ContextMenu = __webpack_require__(11);
 
 	/**
 	 * Create a select box to be used in the editor menu's, which allows to switch mode
@@ -5821,6 +5871,429 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* Jison generated parser */
+	var jsonlint = (function(){
+	var parser = {trace: function trace() { },
+	yy: {},
+	symbols_: {"error":2,"JSONString":3,"STRING":4,"JSONNumber":5,"NUMBER":6,"JSONNullLiteral":7,"NULL":8,"JSONBooleanLiteral":9,"TRUE":10,"FALSE":11,"JSONText":12,"JSONValue":13,"EOF":14,"JSONObject":15,"JSONArray":16,"{":17,"}":18,"JSONMemberList":19,"JSONMember":20,":":21,",":22,"[":23,"]":24,"JSONElementList":25,"$accept":0,"$end":1},
+	terminals_: {2:"error",4:"STRING",6:"NUMBER",8:"NULL",10:"TRUE",11:"FALSE",14:"EOF",17:"{",18:"}",21:":",22:",",23:"[",24:"]"},
+	productions_: [0,[3,1],[5,1],[7,1],[9,1],[9,1],[12,2],[13,1],[13,1],[13,1],[13,1],[13,1],[13,1],[15,2],[15,3],[20,3],[19,1],[19,3],[16,2],[16,3],[25,1],[25,3]],
+	performAction: function anonymous(yytext,yyleng,yylineno,yy,yystate,$$,_$) {
+
+	var $0 = $$.length - 1;
+	switch (yystate) {
+	case 1: // replace escaped characters with actual character
+	          this.$ = yytext.replace(/\\(\\|")/g, "$"+"1")
+	                     .replace(/\\n/g,'\n')
+	                     .replace(/\\r/g,'\r')
+	                     .replace(/\\t/g,'\t')
+	                     .replace(/\\v/g,'\v')
+	                     .replace(/\\f/g,'\f')
+	                     .replace(/\\b/g,'\b');
+	        
+	break;
+	case 2:this.$ = Number(yytext);
+	break;
+	case 3:this.$ = null;
+	break;
+	case 4:this.$ = true;
+	break;
+	case 5:this.$ = false;
+	break;
+	case 6:return this.$ = $$[$0-1];
+	break;
+	case 13:this.$ = {};
+	break;
+	case 14:this.$ = $$[$0-1];
+	break;
+	case 15:this.$ = [$$[$0-2], $$[$0]];
+	break;
+	case 16:this.$ = {}; this.$[$$[$0][0]] = $$[$0][1];
+	break;
+	case 17:this.$ = $$[$0-2]; $$[$0-2][$$[$0][0]] = $$[$0][1];
+	break;
+	case 18:this.$ = [];
+	break;
+	case 19:this.$ = $$[$0-1];
+	break;
+	case 20:this.$ = [$$[$0]];
+	break;
+	case 21:this.$ = $$[$0-2]; $$[$0-2].push($$[$0]);
+	break;
+	}
+	},
+	table: [{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],12:1,13:2,15:7,16:8,17:[1,14],23:[1,15]},{1:[3]},{14:[1,16]},{14:[2,7],18:[2,7],22:[2,7],24:[2,7]},{14:[2,8],18:[2,8],22:[2,8],24:[2,8]},{14:[2,9],18:[2,9],22:[2,9],24:[2,9]},{14:[2,10],18:[2,10],22:[2,10],24:[2,10]},{14:[2,11],18:[2,11],22:[2,11],24:[2,11]},{14:[2,12],18:[2,12],22:[2,12],24:[2,12]},{14:[2,3],18:[2,3],22:[2,3],24:[2,3]},{14:[2,4],18:[2,4],22:[2,4],24:[2,4]},{14:[2,5],18:[2,5],22:[2,5],24:[2,5]},{14:[2,1],18:[2,1],21:[2,1],22:[2,1],24:[2,1]},{14:[2,2],18:[2,2],22:[2,2],24:[2,2]},{3:20,4:[1,12],18:[1,17],19:18,20:19},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:23,15:7,16:8,17:[1,14],23:[1,15],24:[1,21],25:22},{1:[2,6]},{14:[2,13],18:[2,13],22:[2,13],24:[2,13]},{18:[1,24],22:[1,25]},{18:[2,16],22:[2,16]},{21:[1,26]},{14:[2,18],18:[2,18],22:[2,18],24:[2,18]},{22:[1,28],24:[1,27]},{22:[2,20],24:[2,20]},{14:[2,14],18:[2,14],22:[2,14],24:[2,14]},{3:20,4:[1,12],20:29},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:30,15:7,16:8,17:[1,14],23:[1,15]},{14:[2,19],18:[2,19],22:[2,19],24:[2,19]},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:31,15:7,16:8,17:[1,14],23:[1,15]},{18:[2,17],22:[2,17]},{18:[2,15],22:[2,15]},{22:[2,21],24:[2,21]}],
+	defaultActions: {16:[2,6]},
+	parseError: function parseError(str, hash) {
+	    throw new Error(str);
+	},
+	parse: function parse(input) {
+	    var self = this,
+	        stack = [0],
+	        vstack = [null], // semantic value stack
+	        lstack = [], // location stack
+	        table = this.table,
+	        yytext = '',
+	        yylineno = 0,
+	        yyleng = 0,
+	        recovering = 0,
+	        TERROR = 2,
+	        EOF = 1;
+
+	    //this.reductionCount = this.shiftCount = 0;
+
+	    this.lexer.setInput(input);
+	    this.lexer.yy = this.yy;
+	    this.yy.lexer = this.lexer;
+	    if (typeof this.lexer.yylloc == 'undefined')
+	        this.lexer.yylloc = {};
+	    var yyloc = this.lexer.yylloc;
+	    lstack.push(yyloc);
+
+	    if (typeof this.yy.parseError === 'function')
+	        this.parseError = this.yy.parseError;
+
+	    function popStack (n) {
+	        stack.length = stack.length - 2*n;
+	        vstack.length = vstack.length - n;
+	        lstack.length = lstack.length - n;
+	    }
+
+	    function lex() {
+	        var token;
+	        token = self.lexer.lex() || 1; // $end = 1
+	        // if token isn't its numeric value, convert
+	        if (typeof token !== 'number') {
+	            token = self.symbols_[token] || token;
+	        }
+	        return token;
+	    }
+
+	    var symbol, preErrorSymbol, state, action, a, r, yyval={},p,len,newState, expected;
+	    while (true) {
+	        // retreive state number from top of stack
+	        state = stack[stack.length-1];
+
+	        // use default actions if available
+	        if (this.defaultActions[state]) {
+	            action = this.defaultActions[state];
+	        } else {
+	            if (symbol == null)
+	                symbol = lex();
+	            // read action for current state and first input
+	            action = table[state] && table[state][symbol];
+	        }
+
+	        // handle parse error
+	        _handle_error:
+	        if (typeof action === 'undefined' || !action.length || !action[0]) {
+
+	            if (!recovering) {
+	                // Report error
+	                expected = [];
+	                for (p in table[state]) if (this.terminals_[p] && p > 2) {
+	                    expected.push("'"+this.terminals_[p]+"'");
+	                }
+	                var errStr = '';
+	                if (this.lexer.showPosition) {
+	                    errStr = 'Parse error on line '+(yylineno+1)+":\n"+this.lexer.showPosition()+"\nExpecting "+expected.join(', ') + ", got '" + this.terminals_[symbol]+ "'";
+	                } else {
+	                    errStr = 'Parse error on line '+(yylineno+1)+": Unexpected " +
+	                                  (symbol == 1 /*EOF*/ ? "end of input" :
+	                                              ("'"+(this.terminals_[symbol] || symbol)+"'"));
+	                }
+	                this.parseError(errStr,
+	                    {text: this.lexer.match, token: this.terminals_[symbol] || symbol, line: this.lexer.yylineno, loc: yyloc, expected: expected});
+	            }
+
+	            // just recovered from another error
+	            if (recovering == 3) {
+	                if (symbol == EOF) {
+	                    throw new Error(errStr || 'Parsing halted.');
+	                }
+
+	                // discard current lookahead and grab another
+	                yyleng = this.lexer.yyleng;
+	                yytext = this.lexer.yytext;
+	                yylineno = this.lexer.yylineno;
+	                yyloc = this.lexer.yylloc;
+	                symbol = lex();
+	            }
+
+	            // try to recover from error
+	            while (1) {
+	                // check for error recovery rule in this state
+	                if ((TERROR.toString()) in table[state]) {
+	                    break;
+	                }
+	                if (state == 0) {
+	                    throw new Error(errStr || 'Parsing halted.');
+	                }
+	                popStack(1);
+	                state = stack[stack.length-1];
+	            }
+
+	            preErrorSymbol = symbol; // save the lookahead token
+	            symbol = TERROR;         // insert generic error symbol as new lookahead
+	            state = stack[stack.length-1];
+	            action = table[state] && table[state][TERROR];
+	            recovering = 3; // allow 3 real symbols to be shifted before reporting a new error
+	        }
+
+	        // this shouldn't happen, unless resolve defaults are off
+	        if (action[0] instanceof Array && action.length > 1) {
+	            throw new Error('Parse Error: multiple actions possible at state: '+state+', token: '+symbol);
+	        }
+
+	        switch (action[0]) {
+
+	            case 1: // shift
+	                //this.shiftCount++;
+
+	                stack.push(symbol);
+	                vstack.push(this.lexer.yytext);
+	                lstack.push(this.lexer.yylloc);
+	                stack.push(action[1]); // push state
+	                symbol = null;
+	                if (!preErrorSymbol) { // normal execution/no error
+	                    yyleng = this.lexer.yyleng;
+	                    yytext = this.lexer.yytext;
+	                    yylineno = this.lexer.yylineno;
+	                    yyloc = this.lexer.yylloc;
+	                    if (recovering > 0)
+	                        recovering--;
+	                } else { // error just occurred, resume old lookahead f/ before error
+	                    symbol = preErrorSymbol;
+	                    preErrorSymbol = null;
+	                }
+	                break;
+
+	            case 2: // reduce
+	                //this.reductionCount++;
+
+	                len = this.productions_[action[1]][1];
+
+	                // perform semantic action
+	                yyval.$ = vstack[vstack.length-len]; // default to $$ = $1
+	                // default location, uses first token for firsts, last for lasts
+	                yyval._$ = {
+	                    first_line: lstack[lstack.length-(len||1)].first_line,
+	                    last_line: lstack[lstack.length-1].last_line,
+	                    first_column: lstack[lstack.length-(len||1)].first_column,
+	                    last_column: lstack[lstack.length-1].last_column
+	                };
+	                r = this.performAction.call(yyval, yytext, yyleng, yylineno, this.yy, action[1], vstack, lstack);
+
+	                if (typeof r !== 'undefined') {
+	                    return r;
+	                }
+
+	                // pop off stack
+	                if (len) {
+	                    stack = stack.slice(0,-1*len*2);
+	                    vstack = vstack.slice(0, -1*len);
+	                    lstack = lstack.slice(0, -1*len);
+	                }
+
+	                stack.push(this.productions_[action[1]][0]);    // push nonterminal (reduce)
+	                vstack.push(yyval.$);
+	                lstack.push(yyval._$);
+	                // goto new state = table[STATE][NONTERMINAL]
+	                newState = table[stack[stack.length-2]][stack[stack.length-1]];
+	                stack.push(newState);
+	                break;
+
+	            case 3: // accept
+	                return true;
+	        }
+
+	    }
+
+	    return true;
+	}};
+	/* Jison generated lexer */
+	var lexer = (function(){
+	var lexer = ({EOF:1,
+	parseError:function parseError(str, hash) {
+	        if (this.yy.parseError) {
+	            this.yy.parseError(str, hash);
+	        } else {
+	            throw new Error(str);
+	        }
+	    },
+	setInput:function (input) {
+	        this._input = input;
+	        this._more = this._less = this.done = false;
+	        this.yylineno = this.yyleng = 0;
+	        this.yytext = this.matched = this.match = '';
+	        this.conditionStack = ['INITIAL'];
+	        this.yylloc = {first_line:1,first_column:0,last_line:1,last_column:0};
+	        return this;
+	    },
+	input:function () {
+	        var ch = this._input[0];
+	        this.yytext+=ch;
+	        this.yyleng++;
+	        this.match+=ch;
+	        this.matched+=ch;
+	        var lines = ch.match(/\n/);
+	        if (lines) this.yylineno++;
+	        this._input = this._input.slice(1);
+	        return ch;
+	    },
+	unput:function (ch) {
+	        this._input = ch + this._input;
+	        return this;
+	    },
+	more:function () {
+	        this._more = true;
+	        return this;
+	    },
+	less:function (n) {
+	        this._input = this.match.slice(n) + this._input;
+	    },
+	pastInput:function () {
+	        var past = this.matched.substr(0, this.matched.length - this.match.length);
+	        return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
+	    },
+	upcomingInput:function () {
+	        var next = this.match;
+	        if (next.length < 20) {
+	            next += this._input.substr(0, 20-next.length);
+	        }
+	        return (next.substr(0,20)+(next.length > 20 ? '...':'')).replace(/\n/g, "");
+	    },
+	showPosition:function () {
+	        var pre = this.pastInput();
+	        var c = new Array(pre.length + 1).join("-");
+	        return pre + this.upcomingInput() + "\n" + c+"^";
+	    },
+	next:function () {
+	        if (this.done) {
+	            return this.EOF;
+	        }
+	        if (!this._input) this.done = true;
+
+	        var token,
+	            match,
+	            tempMatch,
+	            index,
+	            col,
+	            lines;
+	        if (!this._more) {
+	            this.yytext = '';
+	            this.match = '';
+	        }
+	        var rules = this._currentRules();
+	        for (var i=0;i < rules.length; i++) {
+	            tempMatch = this._input.match(this.rules[rules[i]]);
+	            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
+	                match = tempMatch;
+	                index = i;
+	                if (!this.options.flex) break;
+	            }
+	        }
+	        if (match) {
+	            lines = match[0].match(/\n.*/g);
+	            if (lines) this.yylineno += lines.length;
+	            this.yylloc = {first_line: this.yylloc.last_line,
+	                           last_line: this.yylineno+1,
+	                           first_column: this.yylloc.last_column,
+	                           last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match[0].length}
+	            this.yytext += match[0];
+	            this.match += match[0];
+	            this.yyleng = this.yytext.length;
+	            this._more = false;
+	            this._input = this._input.slice(match[0].length);
+	            this.matched += match[0];
+	            token = this.performAction.call(this, this.yy, this, rules[index],this.conditionStack[this.conditionStack.length-1]);
+	            if (this.done && this._input) this.done = false;
+	            if (token) return token;
+	            else return;
+	        }
+	        if (this._input === "") {
+	            return this.EOF;
+	        } else {
+	            this.parseError('Lexical error on line '+(this.yylineno+1)+'. Unrecognized text.\n'+this.showPosition(), 
+	                    {text: "", token: null, line: this.yylineno});
+	        }
+	    },
+	lex:function lex() {
+	        var r = this.next();
+	        if (typeof r !== 'undefined') {
+	            return r;
+	        } else {
+	            return this.lex();
+	        }
+	    },
+	begin:function begin(condition) {
+	        this.conditionStack.push(condition);
+	    },
+	popState:function popState() {
+	        return this.conditionStack.pop();
+	    },
+	_currentRules:function _currentRules() {
+	        return this.conditions[this.conditionStack[this.conditionStack.length-1]].rules;
+	    },
+	topState:function () {
+	        return this.conditionStack[this.conditionStack.length-2];
+	    },
+	pushState:function begin(condition) {
+	        this.begin(condition);
+	    }});
+	lexer.options = {};
+	lexer.performAction = function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
+
+	var YYSTATE=YY_START
+	switch($avoiding_name_collisions) {
+	case 0:/* skip whitespace */
+	break;
+	case 1:return 6
+	break;
+	case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4
+	break;
+	case 3:return 17
+	break;
+	case 4:return 18
+	break;
+	case 5:return 23
+	break;
+	case 6:return 24
+	break;
+	case 7:return 22
+	break;
+	case 8:return 21
+	break;
+	case 9:return 10
+	break;
+	case 10:return 11
+	break;
+	case 11:return 8
+	break;
+	case 12:return 14
+	break;
+	case 13:return 'INVALID'
+	break;
+	}
+	};
+	lexer.rules = [/^(?:\s+)/,/^(?:(-?([0-9]|[1-9][0-9]+))(\.[0-9]+)?([eE][-+]?[0-9]+)?\b)/,/^(?:"(?:\\[\\"bfnrt/]|\\u[a-fA-F0-9]{4}|[^\\\0-\x09\x0a-\x1f"])*")/,/^(?:\{)/,/^(?:\})/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?::)/,/^(?:true\b)/,/^(?:false\b)/,/^(?:null\b)/,/^(?:$)/,/^(?:.)/];
+	lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13],"inclusive":true}};
+
+
+	;
+	return lexer;})()
+	parser.lexer = lexer;
+	return parser;
+	})();
+	if (true) {
+	  exports.parser = jsonlint;
+	  exports.parse = jsonlint.parse;
+	}
+
+/***/ },
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var util = __webpack_require__(3);
@@ -6266,239 +6739,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	module.exports = ContextMenu;
-
-
-/***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var util = __webpack_require__(3);
-	var ContextMenu = __webpack_require__(10);
-
-	/**
-	 * A factory function to create an AppendNode, which depends on a Node
-	 * @param {Node} Node
-	 */
-	function appendNodeFactory(Node) {
-	  /**
-	   * @constructor AppendNode
-	   * @extends Node
-	   * @param {TreeEditor} editor
-	   * Create a new AppendNode. This is a special node which is created at the
-	   * end of the list with childs for an object or array
-	   */
-	  function AppendNode (editor) {
-	    /** @type {TreeEditor} */
-	    this.editor = editor;
-	    this.dom = {};
-	  }
-
-	  AppendNode.prototype = new Node();
-
-	  /**
-	   * Return a table row with an append button.
-	   * @return {Element} dom   TR element
-	   */
-	  AppendNode.prototype.getDom = function () {
-	    // TODO: implement a new solution for the append node
-	    var dom = this.dom;
-
-	    if (dom.tr) {
-	      return dom.tr;
-	    }
-
-	    this._updateEditability();
-
-	    // a row for the append button
-	    var trAppend = document.createElement('tr');
-	    trAppend.node = this;
-	    dom.tr = trAppend;
-
-	    // TODO: consistent naming
-
-	    if (this.editable.field) {
-	        //console.log(this.editable);
-	      // a cell for the dragarea column
-	      dom.tdDrag = document.createElement('td');
-
-	      // create context menu
-	      var tdMenu = document.createElement('td');
-	      dom.tdMenu = tdMenu;
-	      var menu = document.createElement('button');
-	      menu.className = 'contextmenu';
-	      menu.title = 'Click to open the actions menu (Ctrl+M)';
-	      dom.menu = menu;
-	      tdMenu.appendChild(dom.menu);
-	    }
-
-	    // a cell for the contents (showing text 'empty')
-	    var tdAppend = document.createElement('td');
-	    var domText = document.createElement('div');
-	    domText.innerHTML = '(empty)';
-	    domText.className = 'readonly';
-	    tdAppend.appendChild(domText);
-	    dom.td = tdAppend;
-	    dom.text = domText;
-
-	    this.updateDom();
-
-	    return trAppend;
-	  };
-
-	  /**
-	   * Update the HTML dom of the Node
-	   */
-	  AppendNode.prototype.updateDom = function () {
-	    var dom = this.dom;
-	    var tdAppend = dom.td;
-	    if (tdAppend) {
-	      tdAppend.style.paddingLeft = (this.getLevel() * 24 + 26) + 'px';
-	      // TODO: not so nice hard coded offset
-	    }
-
-	    var domText = dom.text;
-	    if (domText) {
-	      domText.innerHTML = '(empty ' + this.parent.type + ')';
-	    }
-
-	    // attach or detach the contents of the append node:
-	    // hide when the parent has childs, show when the parent has no childs
-	    var trAppend = dom.tr;
-	    if (!this.isVisible()) {
-	      if (dom.tr.firstChild) {
-	        if (dom.tdDrag) {
-	          trAppend.removeChild(dom.tdDrag);
-	        }
-	        if (dom.tdMenu) {
-	          trAppend.removeChild(dom.tdMenu);
-	        }
-	        trAppend.removeChild(tdAppend);
-	      }
-	    }
-	    else {
-	      if (!dom.tr.firstChild) {
-	        if (dom.tdDrag) {
-	          trAppend.appendChild(dom.tdDrag);
-	        }
-	        if (dom.tdMenu) {
-	          trAppend.appendChild(dom.tdMenu);
-	        }
-	        trAppend.appendChild(tdAppend);
-	      }
-	    }
-	  };
-
-	  /**
-	   * Check whether the AppendNode is currently visible.
-	   * the AppendNode is visible when its parent has no childs (i.e. is empty).
-	   * @return {boolean} isVisible
-	   */
-	  AppendNode.prototype.isVisible = function () {
-	    return (this.parent.childs.length == 0);
-	  };
-
-	  /**
-	   * Show a contextmenu for this node
-	   * @param {HTMLElement} anchor   The element to attach the menu to.
-	   * @param {function} [onClose]   Callback method called when the context menu
-	   *                               is being closed.
-	   */
-	  AppendNode.prototype.showContextMenu = function (anchor, onClose) {
-	    var node = this;
-	    var titles = Node.TYPE_TITLES;
-	    var items = [
-	      // create append button
-	      {
-	        'text': 'Append',
-	        'title': 'Append a new field with type \'auto\' (Ctrl+Shift+Ins)',
-	        'submenuTitle': 'Select the type of the field to be appended',
-	        'className': 'insert',
-	        'click': function () {
-	          node._onAppend('', '', 'auto');
-	        },
-	        'submenu': [
-	          {
-	            'text': 'Auto',
-	            'className': 'type-auto',
-	            'title': titles.auto,
-	            'click': function () {
-	              node._onAppend('', '', 'auto');
-	            }
-	          },
-	          {
-	            'text': 'Array',
-	            'className': 'type-array',
-	            'title': titles.array,
-	            'click': function () {
-	              node._onAppend('', []);
-	            }
-	          },
-	          {
-	            'text': 'Object',
-	            'className': 'type-object',
-	            'title': titles.object,
-	            'click': function () {
-	              node._onAppend('', {});
-	            }
-	          },
-	          {
-	            'text': 'String',
-	            'className': 'type-string',
-	            'title': titles.string,
-	            'click': function () {
-	              node._onAppend('', '', 'string');
-	            }
-	          }
-	        ]
-	      }
-	    ];
-
-	    var menu = new ContextMenu(items, {close: onClose});
-	    menu.show(anchor);
-	  };
-
-	  /**
-	   * Handle an event. The event is catched centrally by the editor
-	   * @param {Event} event
-	   */
-	  AppendNode.prototype.onEvent = function (event) {
-	    var type = event.type;
-	    var target = event.target || event.srcElement;
-	    var dom = this.dom;
-
-	    // highlight the append nodes parent
-	    var menu = dom.menu;
-	    if (target == menu) {
-	      if (type == 'mouseover') {
-	        this.editor.highlighter.highlight(this.parent);
-	      }
-	      else if (type == 'mouseout') {
-	        this.editor.highlighter.unhighlight();
-	      }
-	    }
-
-	    // context menu events
-	    if (type == 'click' && target == dom.menu) {
-	      var highlighter = this.editor.highlighter;
-	      highlighter.highlight(this.parent);
-	      highlighter.lock();
-	      util.addClassName(dom.menu, 'selected');
-	      this.showContextMenu(dom.menu, function () {
-	        util.removeClassName(dom.menu, 'selected');
-	        highlighter.unlock();
-	        highlighter.unhighlight();
-	      });
-	    }
-
-	    if (type == 'keydown') {
-	      this.onKeyDown(event);
-	    }
-	  };
-
-	  return AppendNode;
-	}
-
-	module.exports = appendNodeFactory;
 
 
 /***/ },
@@ -25964,424 +26204,234 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* Jison generated parser */
-	var jsonlint = (function(){
-	var parser = {trace: function trace() { },
-	yy: {},
-	symbols_: {"error":2,"JSONString":3,"STRING":4,"JSONNumber":5,"NUMBER":6,"JSONNullLiteral":7,"NULL":8,"JSONBooleanLiteral":9,"TRUE":10,"FALSE":11,"JSONText":12,"JSONValue":13,"EOF":14,"JSONObject":15,"JSONArray":16,"{":17,"}":18,"JSONMemberList":19,"JSONMember":20,":":21,",":22,"[":23,"]":24,"JSONElementList":25,"$accept":0,"$end":1},
-	terminals_: {2:"error",4:"STRING",6:"NUMBER",8:"NULL",10:"TRUE",11:"FALSE",14:"EOF",17:"{",18:"}",21:":",22:",",23:"[",24:"]"},
-	productions_: [0,[3,1],[5,1],[7,1],[9,1],[9,1],[12,2],[13,1],[13,1],[13,1],[13,1],[13,1],[13,1],[15,2],[15,3],[20,3],[19,1],[19,3],[16,2],[16,3],[25,1],[25,3]],
-	performAction: function anonymous(yytext,yyleng,yylineno,yy,yystate,$$,_$) {
+	var util = __webpack_require__(3);
+	var ContextMenu = __webpack_require__(11);
 
-	var $0 = $$.length - 1;
-	switch (yystate) {
-	case 1: // replace escaped characters with actual character
-	          this.$ = yytext.replace(/\\(\\|")/g, "$"+"1")
-	                     .replace(/\\n/g,'\n')
-	                     .replace(/\\r/g,'\r')
-	                     .replace(/\\t/g,'\t')
-	                     .replace(/\\v/g,'\v')
-	                     .replace(/\\f/g,'\f')
-	                     .replace(/\\b/g,'\b');
-	        
-	break;
-	case 2:this.$ = Number(yytext);
-	break;
-	case 3:this.$ = null;
-	break;
-	case 4:this.$ = true;
-	break;
-	case 5:this.$ = false;
-	break;
-	case 6:return this.$ = $$[$0-1];
-	break;
-	case 13:this.$ = {};
-	break;
-	case 14:this.$ = $$[$0-1];
-	break;
-	case 15:this.$ = [$$[$0-2], $$[$0]];
-	break;
-	case 16:this.$ = {}; this.$[$$[$0][0]] = $$[$0][1];
-	break;
-	case 17:this.$ = $$[$0-2]; $$[$0-2][$$[$0][0]] = $$[$0][1];
-	break;
-	case 18:this.$ = [];
-	break;
-	case 19:this.$ = $$[$0-1];
-	break;
-	case 20:this.$ = [$$[$0]];
-	break;
-	case 21:this.$ = $$[$0-2]; $$[$0-2].push($$[$0]);
-	break;
-	}
-	},
-	table: [{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],12:1,13:2,15:7,16:8,17:[1,14],23:[1,15]},{1:[3]},{14:[1,16]},{14:[2,7],18:[2,7],22:[2,7],24:[2,7]},{14:[2,8],18:[2,8],22:[2,8],24:[2,8]},{14:[2,9],18:[2,9],22:[2,9],24:[2,9]},{14:[2,10],18:[2,10],22:[2,10],24:[2,10]},{14:[2,11],18:[2,11],22:[2,11],24:[2,11]},{14:[2,12],18:[2,12],22:[2,12],24:[2,12]},{14:[2,3],18:[2,3],22:[2,3],24:[2,3]},{14:[2,4],18:[2,4],22:[2,4],24:[2,4]},{14:[2,5],18:[2,5],22:[2,5],24:[2,5]},{14:[2,1],18:[2,1],21:[2,1],22:[2,1],24:[2,1]},{14:[2,2],18:[2,2],22:[2,2],24:[2,2]},{3:20,4:[1,12],18:[1,17],19:18,20:19},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:23,15:7,16:8,17:[1,14],23:[1,15],24:[1,21],25:22},{1:[2,6]},{14:[2,13],18:[2,13],22:[2,13],24:[2,13]},{18:[1,24],22:[1,25]},{18:[2,16],22:[2,16]},{21:[1,26]},{14:[2,18],18:[2,18],22:[2,18],24:[2,18]},{22:[1,28],24:[1,27]},{22:[2,20],24:[2,20]},{14:[2,14],18:[2,14],22:[2,14],24:[2,14]},{3:20,4:[1,12],20:29},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:30,15:7,16:8,17:[1,14],23:[1,15]},{14:[2,19],18:[2,19],22:[2,19],24:[2,19]},{3:5,4:[1,12],5:6,6:[1,13],7:3,8:[1,9],9:4,10:[1,10],11:[1,11],13:31,15:7,16:8,17:[1,14],23:[1,15]},{18:[2,17],22:[2,17]},{18:[2,15],22:[2,15]},{22:[2,21],24:[2,21]}],
-	defaultActions: {16:[2,6]},
-	parseError: function parseError(str, hash) {
-	    throw new Error(str);
-	},
-	parse: function parse(input) {
-	    var self = this,
-	        stack = [0],
-	        vstack = [null], // semantic value stack
-	        lstack = [], // location stack
-	        table = this.table,
-	        yytext = '',
-	        yylineno = 0,
-	        yyleng = 0,
-	        recovering = 0,
-	        TERROR = 2,
-	        EOF = 1;
+	/**
+	 * A factory function to create an AppendNode, which depends on a Node
+	 * @param {Node} Node
+	 */
+	function appendNodeFactory(Node) {
+	  /**
+	   * @constructor AppendNode
+	   * @extends Node
+	   * @param {TreeEditor} editor
+	   * Create a new AppendNode. This is a special node which is created at the
+	   * end of the list with childs for an object or array
+	   */
+	  function AppendNode (editor) {
+	    /** @type {TreeEditor} */
+	    this.editor = editor;
+	    this.dom = {};
+	  }
 
-	    //this.reductionCount = this.shiftCount = 0;
+	  AppendNode.prototype = new Node();
 
-	    this.lexer.setInput(input);
-	    this.lexer.yy = this.yy;
-	    this.yy.lexer = this.lexer;
-	    if (typeof this.lexer.yylloc == 'undefined')
-	        this.lexer.yylloc = {};
-	    var yyloc = this.lexer.yylloc;
-	    lstack.push(yyloc);
+	  /**
+	   * Return a table row with an append button.
+	   * @return {Element} dom   TR element
+	   */
+	  AppendNode.prototype.getDom = function () {
+	    // TODO: implement a new solution for the append node
+	    var dom = this.dom;
 
-	    if (typeof this.yy.parseError === 'function')
-	        this.parseError = this.yy.parseError;
-
-	    function popStack (n) {
-	        stack.length = stack.length - 2*n;
-	        vstack.length = vstack.length - n;
-	        lstack.length = lstack.length - n;
+	    if (dom.tr) {
+	      return dom.tr;
 	    }
 
-	    function lex() {
-	        var token;
-	        token = self.lexer.lex() || 1; // $end = 1
-	        // if token isn't its numeric value, convert
-	        if (typeof token !== 'number') {
-	            token = self.symbols_[token] || token;
-	        }
-	        return token;
+	    this._updateEditability();
+
+	    // a row for the append button
+	    var trAppend = document.createElement('tr');
+	    trAppend.node = this;
+	    dom.tr = trAppend;
+
+	    // TODO: consistent naming
+
+	    if (this.editable.field) {
+	        //console.log(this.editable);
+	      // a cell for the dragarea column
+	      dom.tdDrag = document.createElement('td');
+
+	      // create context menu
+	      var tdMenu = document.createElement('td');
+	      dom.tdMenu = tdMenu;
+	      var menu = document.createElement('button');
+	      menu.className = 'contextmenu';
+	      menu.title = 'Click to open the actions menu (Ctrl+M)';
+	      dom.menu = menu;
+	      tdMenu.appendChild(dom.menu);
 	    }
 
-	    var symbol, preErrorSymbol, state, action, a, r, yyval={},p,len,newState, expected;
-	    while (true) {
-	        // retreive state number from top of stack
-	        state = stack[stack.length-1];
+	    // a cell for the contents (showing text 'empty')
+	    var tdAppend = document.createElement('td');
+	    var domText = document.createElement('div');
+	    domText.innerHTML = '(empty)';
+	    domText.className = 'readonly';
+	    tdAppend.appendChild(domText);
+	    dom.td = tdAppend;
+	    dom.text = domText;
 
-	        // use default actions if available
-	        if (this.defaultActions[state]) {
-	            action = this.defaultActions[state];
-	        } else {
-	            if (symbol == null)
-	                symbol = lex();
-	            // read action for current state and first input
-	            action = table[state] && table[state][symbol];
-	        }
+	    this.updateDom();
 
-	        // handle parse error
-	        _handle_error:
-	        if (typeof action === 'undefined' || !action.length || !action[0]) {
+	    return trAppend;
+	  };
 
-	            if (!recovering) {
-	                // Report error
-	                expected = [];
-	                for (p in table[state]) if (this.terminals_[p] && p > 2) {
-	                    expected.push("'"+this.terminals_[p]+"'");
-	                }
-	                var errStr = '';
-	                if (this.lexer.showPosition) {
-	                    errStr = 'Parse error on line '+(yylineno+1)+":\n"+this.lexer.showPosition()+"\nExpecting "+expected.join(', ') + ", got '" + this.terminals_[symbol]+ "'";
-	                } else {
-	                    errStr = 'Parse error on line '+(yylineno+1)+": Unexpected " +
-	                                  (symbol == 1 /*EOF*/ ? "end of input" :
-	                                              ("'"+(this.terminals_[symbol] || symbol)+"'"));
-	                }
-	                this.parseError(errStr,
-	                    {text: this.lexer.match, token: this.terminals_[symbol] || symbol, line: this.lexer.yylineno, loc: yyloc, expected: expected});
-	            }
-
-	            // just recovered from another error
-	            if (recovering == 3) {
-	                if (symbol == EOF) {
-	                    throw new Error(errStr || 'Parsing halted.');
-	                }
-
-	                // discard current lookahead and grab another
-	                yyleng = this.lexer.yyleng;
-	                yytext = this.lexer.yytext;
-	                yylineno = this.lexer.yylineno;
-	                yyloc = this.lexer.yylloc;
-	                symbol = lex();
-	            }
-
-	            // try to recover from error
-	            while (1) {
-	                // check for error recovery rule in this state
-	                if ((TERROR.toString()) in table[state]) {
-	                    break;
-	                }
-	                if (state == 0) {
-	                    throw new Error(errStr || 'Parsing halted.');
-	                }
-	                popStack(1);
-	                state = stack[stack.length-1];
-	            }
-
-	            preErrorSymbol = symbol; // save the lookahead token
-	            symbol = TERROR;         // insert generic error symbol as new lookahead
-	            state = stack[stack.length-1];
-	            action = table[state] && table[state][TERROR];
-	            recovering = 3; // allow 3 real symbols to be shifted before reporting a new error
-	        }
-
-	        // this shouldn't happen, unless resolve defaults are off
-	        if (action[0] instanceof Array && action.length > 1) {
-	            throw new Error('Parse Error: multiple actions possible at state: '+state+', token: '+symbol);
-	        }
-
-	        switch (action[0]) {
-
-	            case 1: // shift
-	                //this.shiftCount++;
-
-	                stack.push(symbol);
-	                vstack.push(this.lexer.yytext);
-	                lstack.push(this.lexer.yylloc);
-	                stack.push(action[1]); // push state
-	                symbol = null;
-	                if (!preErrorSymbol) { // normal execution/no error
-	                    yyleng = this.lexer.yyleng;
-	                    yytext = this.lexer.yytext;
-	                    yylineno = this.lexer.yylineno;
-	                    yyloc = this.lexer.yylloc;
-	                    if (recovering > 0)
-	                        recovering--;
-	                } else { // error just occurred, resume old lookahead f/ before error
-	                    symbol = preErrorSymbol;
-	                    preErrorSymbol = null;
-	                }
-	                break;
-
-	            case 2: // reduce
-	                //this.reductionCount++;
-
-	                len = this.productions_[action[1]][1];
-
-	                // perform semantic action
-	                yyval.$ = vstack[vstack.length-len]; // default to $$ = $1
-	                // default location, uses first token for firsts, last for lasts
-	                yyval._$ = {
-	                    first_line: lstack[lstack.length-(len||1)].first_line,
-	                    last_line: lstack[lstack.length-1].last_line,
-	                    first_column: lstack[lstack.length-(len||1)].first_column,
-	                    last_column: lstack[lstack.length-1].last_column
-	                };
-	                r = this.performAction.call(yyval, yytext, yyleng, yylineno, this.yy, action[1], vstack, lstack);
-
-	                if (typeof r !== 'undefined') {
-	                    return r;
-	                }
-
-	                // pop off stack
-	                if (len) {
-	                    stack = stack.slice(0,-1*len*2);
-	                    vstack = vstack.slice(0, -1*len);
-	                    lstack = lstack.slice(0, -1*len);
-	                }
-
-	                stack.push(this.productions_[action[1]][0]);    // push nonterminal (reduce)
-	                vstack.push(yyval.$);
-	                lstack.push(yyval._$);
-	                // goto new state = table[STATE][NONTERMINAL]
-	                newState = table[stack[stack.length-2]][stack[stack.length-1]];
-	                stack.push(newState);
-	                break;
-
-	            case 3: // accept
-	                return true;
-	        }
-
+	  /**
+	   * Update the HTML dom of the Node
+	   */
+	  AppendNode.prototype.updateDom = function () {
+	    var dom = this.dom;
+	    var tdAppend = dom.td;
+	    if (tdAppend) {
+	      tdAppend.style.paddingLeft = (this.getLevel() * 24 + 26) + 'px';
+	      // TODO: not so nice hard coded offset
 	    }
 
-	    return true;
-	}};
-	/* Jison generated lexer */
-	var lexer = (function(){
-	var lexer = ({EOF:1,
-	parseError:function parseError(str, hash) {
-	        if (this.yy.parseError) {
-	            this.yy.parseError(str, hash);
-	        } else {
-	            throw new Error(str);
-	        }
-	    },
-	setInput:function (input) {
-	        this._input = input;
-	        this._more = this._less = this.done = false;
-	        this.yylineno = this.yyleng = 0;
-	        this.yytext = this.matched = this.match = '';
-	        this.conditionStack = ['INITIAL'];
-	        this.yylloc = {first_line:1,first_column:0,last_line:1,last_column:0};
-	        return this;
-	    },
-	input:function () {
-	        var ch = this._input[0];
-	        this.yytext+=ch;
-	        this.yyleng++;
-	        this.match+=ch;
-	        this.matched+=ch;
-	        var lines = ch.match(/\n/);
-	        if (lines) this.yylineno++;
-	        this._input = this._input.slice(1);
-	        return ch;
-	    },
-	unput:function (ch) {
-	        this._input = ch + this._input;
-	        return this;
-	    },
-	more:function () {
-	        this._more = true;
-	        return this;
-	    },
-	less:function (n) {
-	        this._input = this.match.slice(n) + this._input;
-	    },
-	pastInput:function () {
-	        var past = this.matched.substr(0, this.matched.length - this.match.length);
-	        return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
-	    },
-	upcomingInput:function () {
-	        var next = this.match;
-	        if (next.length < 20) {
-	            next += this._input.substr(0, 20-next.length);
-	        }
-	        return (next.substr(0,20)+(next.length > 20 ? '...':'')).replace(/\n/g, "");
-	    },
-	showPosition:function () {
-	        var pre = this.pastInput();
-	        var c = new Array(pre.length + 1).join("-");
-	        return pre + this.upcomingInput() + "\n" + c+"^";
-	    },
-	next:function () {
-	        if (this.done) {
-	            return this.EOF;
-	        }
-	        if (!this._input) this.done = true;
+	    var domText = dom.text;
+	    if (domText) {
+	      domText.innerHTML = '(empty ' + this.parent.type + ')';
+	    }
 
-	        var token,
-	            match,
-	            tempMatch,
-	            index,
-	            col,
-	            lines;
-	        if (!this._more) {
-	            this.yytext = '';
-	            this.match = '';
+	    // attach or detach the contents of the append node:
+	    // hide when the parent has childs, show when the parent has no childs
+	    var trAppend = dom.tr;
+	    if (!this.isVisible()) {
+	      if (dom.tr.firstChild) {
+	        if (dom.tdDrag) {
+	          trAppend.removeChild(dom.tdDrag);
 	        }
-	        var rules = this._currentRules();
-	        for (var i=0;i < rules.length; i++) {
-	            tempMatch = this._input.match(this.rules[rules[i]]);
-	            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
-	                match = tempMatch;
-	                index = i;
-	                if (!this.options.flex) break;
+	        if (dom.tdMenu) {
+	          trAppend.removeChild(dom.tdMenu);
+	        }
+	        trAppend.removeChild(tdAppend);
+	      }
+	    }
+	    else {
+	      if (!dom.tr.firstChild) {
+	        if (dom.tdDrag) {
+	          trAppend.appendChild(dom.tdDrag);
+	        }
+	        if (dom.tdMenu) {
+	          trAppend.appendChild(dom.tdMenu);
+	        }
+	        trAppend.appendChild(tdAppend);
+	      }
+	    }
+	  };
+
+	  /**
+	   * Check whether the AppendNode is currently visible.
+	   * the AppendNode is visible when its parent has no childs (i.e. is empty).
+	   * @return {boolean} isVisible
+	   */
+	  AppendNode.prototype.isVisible = function () {
+	    return (this.parent.childs.length == 0);
+	  };
+
+	  /**
+	   * Show a contextmenu for this node
+	   * @param {HTMLElement} anchor   The element to attach the menu to.
+	   * @param {function} [onClose]   Callback method called when the context menu
+	   *                               is being closed.
+	   */
+	  AppendNode.prototype.showContextMenu = function (anchor, onClose) {
+	    var node = this;
+	    var titles = Node.TYPE_TITLES;
+	    var items = [
+	      // create append button
+	      {
+	        'text': 'Append',
+	        'title': 'Append a new field with type \'auto\' (Ctrl+Shift+Ins)',
+	        'submenuTitle': 'Select the type of the field to be appended',
+	        'className': 'insert',
+	        'click': function () {
+	          node._onAppend('', '', 'auto');
+	        },
+	        'submenu': [
+	          {
+	            'text': 'Auto',
+	            'className': 'type-auto',
+	            'title': titles.auto,
+	            'click': function () {
+	              node._onAppend('', '', 'auto');
 	            }
-	        }
-	        if (match) {
-	            lines = match[0].match(/\n.*/g);
-	            if (lines) this.yylineno += lines.length;
-	            this.yylloc = {first_line: this.yylloc.last_line,
-	                           last_line: this.yylineno+1,
-	                           first_column: this.yylloc.last_column,
-	                           last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match[0].length}
-	            this.yytext += match[0];
-	            this.match += match[0];
-	            this.yyleng = this.yytext.length;
-	            this._more = false;
-	            this._input = this._input.slice(match[0].length);
-	            this.matched += match[0];
-	            token = this.performAction.call(this, this.yy, this, rules[index],this.conditionStack[this.conditionStack.length-1]);
-	            if (this.done && this._input) this.done = false;
-	            if (token) return token;
-	            else return;
-	        }
-	        if (this._input === "") {
-	            return this.EOF;
-	        } else {
-	            this.parseError('Lexical error on line '+(this.yylineno+1)+'. Unrecognized text.\n'+this.showPosition(), 
-	                    {text: "", token: null, line: this.yylineno});
-	        }
-	    },
-	lex:function lex() {
-	        var r = this.next();
-	        if (typeof r !== 'undefined') {
-	            return r;
-	        } else {
-	            return this.lex();
-	        }
-	    },
-	begin:function begin(condition) {
-	        this.conditionStack.push(condition);
-	    },
-	popState:function popState() {
-	        return this.conditionStack.pop();
-	    },
-	_currentRules:function _currentRules() {
-	        return this.conditions[this.conditionStack[this.conditionStack.length-1]].rules;
-	    },
-	topState:function () {
-	        return this.conditionStack[this.conditionStack.length-2];
-	    },
-	pushState:function begin(condition) {
-	        this.begin(condition);
-	    }});
-	lexer.options = {};
-	lexer.performAction = function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
+	          },
+	          {
+	            'text': 'Array',
+	            'className': 'type-array',
+	            'title': titles.array,
+	            'click': function () {
+	              node._onAppend('', []);
+	            }
+	          },
+	          {
+	            'text': 'Object',
+	            'className': 'type-object',
+	            'title': titles.object,
+	            'click': function () {
+	              node._onAppend('', {});
+	            }
+	          },
+	          {
+	            'text': 'String',
+	            'className': 'type-string',
+	            'title': titles.string,
+	            'click': function () {
+	              node._onAppend('', '', 'string');
+	            }
+	          }
+	        ]
+	      }
+	    ];
 
-	var YYSTATE=YY_START
-	switch($avoiding_name_collisions) {
-	case 0:/* skip whitespace */
-	break;
-	case 1:return 6
-	break;
-	case 2:yy_.yytext = yy_.yytext.substr(1,yy_.yyleng-2); return 4
-	break;
-	case 3:return 17
-	break;
-	case 4:return 18
-	break;
-	case 5:return 23
-	break;
-	case 6:return 24
-	break;
-	case 7:return 22
-	break;
-	case 8:return 21
-	break;
-	case 9:return 10
-	break;
-	case 10:return 11
-	break;
-	case 11:return 8
-	break;
-	case 12:return 14
-	break;
-	case 13:return 'INVALID'
-	break;
+	    var menu = new ContextMenu(items, {close: onClose});
+	    menu.show(anchor);
+	  };
+
+	  /**
+	   * Handle an event. The event is catched centrally by the editor
+	   * @param {Event} event
+	   */
+	  AppendNode.prototype.onEvent = function (event) {
+	    var type = event.type;
+	    var target = event.target || event.srcElement;
+	    var dom = this.dom;
+
+	    // highlight the append nodes parent
+	    var menu = dom.menu;
+	    if (target == menu) {
+	      if (type == 'mouseover') {
+	        this.editor.highlighter.highlight(this.parent);
+	      }
+	      else if (type == 'mouseout') {
+	        this.editor.highlighter.unhighlight();
+	      }
+	    }
+
+	    // context menu events
+	    if (type == 'click' && target == dom.menu) {
+	      var highlighter = this.editor.highlighter;
+	      highlighter.highlight(this.parent);
+	      highlighter.lock();
+	      util.addClassName(dom.menu, 'selected');
+	      this.showContextMenu(dom.menu, function () {
+	        util.removeClassName(dom.menu, 'selected');
+	        highlighter.unlock();
+	        highlighter.unhighlight();
+	      });
+	    }
+
+	    if (type == 'keydown') {
+	      this.onKeyDown(event);
+	    }
+	  };
+
+	  return AppendNode;
 	}
-	};
-	lexer.rules = [/^(?:\s+)/,/^(?:(-?([0-9]|[1-9][0-9]+))(\.[0-9]+)?([eE][-+]?[0-9]+)?\b)/,/^(?:"(?:\\[\\"bfnrt/]|\\u[a-fA-F0-9]{4}|[^\\\0-\x09\x0a-\x1f"])*")/,/^(?:\{)/,/^(?:\})/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?::)/,/^(?:true\b)/,/^(?:false\b)/,/^(?:null\b)/,/^(?:$)/,/^(?:.)/];
-	lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13],"inclusive":true}};
 
+	module.exports = appendNodeFactory;
 
-	;
-	return lexer;})()
-	parser.lexer = lexer;
-	return parser;
-	})();
-	if (true) {
-	  exports.parser = jsonlint;
-	  exports.parse = jsonlint.parse;
-	}
 
 /***/ }
 /******/ ])

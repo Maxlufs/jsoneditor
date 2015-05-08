@@ -178,55 +178,71 @@ exports.extend = function extend(a, b) {
     return a;
 };
 
+exports.deepExtend = function(destination, source) {
+  for (var property in source) {
+    if (source[property] && source[property].constructor &&
+     source[property].constructor === Object) {
+      destination[property] = destination[property] || {};
+      arguments.callee(destination[property], source[property]);
+    } else {
+      destination[property] = source[property];
+    }
+  }
+  return destination;
+};
+
 /**
  * delete a property in an object with a given path
  * @param {Object} obj
  * @param {Array} path
  * @return {Object} root
  */
-exports.deleteNested = function (obj /*, path*/ ) {
+exports.deepDelete = function (obj /*, path*/ ) {
     var root = obj;
-    var args = arguments[1];
+    // keep a pointer to point at root
+    var path = arguments[1];
+    // path
 
+    //console.log(path);
     // when root is unchecked, set treemode.checked to {}
-    if (args.length === 0) return {};
+    if (path.length === 0) return {};
 
     // first find that key, then delete it
-    for (var i = 0, n = args.length - 1; i < n; i++) {
+    for (var i = 0, n = path.length - 1; i < n; i++) {
         //console.log(obj);
-        obj = obj[args[i]];
+        obj = obj[path[i]];
     }
-    delete obj[args[i]];
+    delete obj[path[i]];
     // second get rid of the empty contents
-
+    //console.log(root);
+    deepClearEmpty(root);
     return root;
 };
 
-function clearEmpty(obj) { // not checking {} as arg for purpose.
+// remove the empty contents inside an object set a flag isEmpty, if any
+// children is non-empty, set it to false and pass up to parent otherwise,
+// consider the parent's isEmpty flag is true, since all its children are empty
+// The function returns the boolean flag
+var deepClearEmpty = function (obj) {
+    if (typeof obj !== "object" || obj === null) return false; // primitive types and null
+    if (obj instanceof Array && obj.length === 0) return true; // []
+    if (!obj.length && Object.keys(obj).length === 0) return true; // {}
+
+    var isEmpty = true;
     for (var prop in obj) {
         if (obj.hasOwnProperty(prop)) {
-            // delete empty properties
-            if (typeof obj[prop] === 'object' && obj[prop] !== null) {
-                if (Object.getOwnPropertyNames(obj[prop]).length === 0) {
-                    delete obj[prop];
-                }
-                clearEmpty(obj[prop]);
+            var child = obj[prop];
+            // child is the value, obj[prop] is the pointer
+            //deepClearEmpty(child) ? delete obj[prop] : isEmpty = false;
+            if (deepClearEmpty(child)) {
+                delete obj[prop];
+            } else {
+                isEmpty = false;
             }
         }
     }
-}
-
-var x = {
-    test: {
-        y:2,
-        empty:{
-            test:{}
-        }
-    },
-    x: 1
+    return isEmpty;
 };
-clearEmpty(x);
-console.log(x);
 
 /**
  * Remove all properties from object a

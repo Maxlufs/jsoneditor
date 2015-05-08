@@ -769,7 +769,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 	    if (node.dom.checkbox.checked) { // if checking the checkbox
-	        console.log(node.jsonOnPath())
+	        console.log(node.jsonOnPath());
 	        this.checked = util.deepExtend(this.checked, node.jsonOnPath());
 	    } else {
 	        var path = node.path();
@@ -1695,18 +1695,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return a;
 	};
 
-	exports.deepExtend = function(destination, source) {
-	  for (var property in source) {
-	    if (source[property] && source[property].constructor &&
-	     source[property].constructor === Object) {
-	      destination[property] = destination[property] || {};
-	      arguments.callee(destination[property], source[property]);
-	    } else {
-	      destination[property] = source[property];
+	exports.deepExtend = function deepExtend(destination, source) {
+	    for (var property in source) {
+	        if (source[property] && source[property].constructor &&
+	            source[property].constructor === Object) {
+	            destination[property] = destination[property] || {};
+	            arguments.callee(destination[property], source[property]);
+	        } else if (source[property] && source[property].constructor && source[property].constructor === Array) {
+	            destination[property] = destination[property] || [];
+	            arguments.callee(destination[property], source[property]);
+	        } else {
+	            destination[property] = source[property];
+	        }
 	    }
-	  }
-	  return destination;
+	    return destination;
 	};
+
+	//var x = {
+	    //data: [
+	        //[null, null, 3]
+	    //]
+	//};
+	//var y = {
+	    //data: [
+	        //[null, 2]
+	    //]
+	//};
+	//exports.deepExtend(x, y);
+	//console.log(x);
 
 	/**
 	 * delete a property in an object with a given path
@@ -1720,7 +1736,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = arguments[1];
 	    // path
 
-	    //console.log(path);
 	    // when root is unchecked, set treemode.checked to {}
 	    if (path.length === 0) return {};
 
@@ -2899,6 +2914,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        root = [];
 	    else if(typeof path[0] === "string")
 	        root = {};
+	    else if(typeof path[0] === "undefined") // check on root node
+	        return this.getValue();
 
 	    var curr = root;
 	    var currKey,nextKey;
@@ -2914,7 +2931,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            curr[currKey] = this.getValue();
 	        curr = curr[currKey];
 	    }
-
 
 	    return root;
 	};

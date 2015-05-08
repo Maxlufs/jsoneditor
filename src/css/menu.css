@@ -10,8 +10,8 @@
   box-sizing: border-box;
 
   color: #1A1A1A;
-  background-color: #00384A;
-  border-bottom: 1px solid #1bb9ec;
+  background: linear-gradient(to bottom right, #080808, #494949);
+  border-bottom: 1px solid #aaa;
 }
 
 .jsoneditor .menu button {
@@ -20,8 +20,8 @@
   margin: 2px;
   padding: 0;
   border-radius: 2px;
-  border: 1px solid #aec0f8;
-  background: #e3eaf6 url('img/jsoneditor-icons.png');
+  border: 1px solid #aaa;
+  background: #bbb url('img/jsoneditor-icons.png');
   color: #4D4D4D;
   opacity: 0.8;
 
@@ -32,7 +32,7 @@
 }
 
 .jsoneditor .menu button:hover {
-  background-color: #f0f2f5;
+  background-color: #ddd;
 }
 .jsoneditor .menu button:focus,
 .jsoneditor .menu button:active {

@@ -388,7 +388,7 @@ treemode.setChecked = function (node) {
 
 
     if (node.dom.checkbox.checked) { // if checking the checkbox
-        console.log(node.jsonOnPath())
+        console.log(node.jsonOnPath());
         this.checked = util.deepExtend(this.checked, node.jsonOnPath());
     } else {
         var path = node.path();

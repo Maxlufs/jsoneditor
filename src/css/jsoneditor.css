@@ -128,7 +128,7 @@
 
 .jsoneditor {
   color: #1A1A1A;
-  border: 1px solid #1bb9ec;
+  border: 1px solid #aaa;
   -moz-box-sizing: border-box;
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
@@ -220,4 +220,9 @@
   font-family: droid sans mono, monospace, courier new, courier, sans-serif;
   font-size: 10pt;
   color: #1A1A1A;
+}
+
+.jsoneditor td:nth-child(2) {
+	text-align: center;
+	vertical-align: middle;
 }

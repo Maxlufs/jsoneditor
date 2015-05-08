@@ -25,7 +25,6 @@
         var outputJson = {};
         var inputEditor = new JSONEditor(inputContainer, {
             mode: "tree",
-            modes: ["tree", "code", "view", "form"], // menu
             change: function() {},
             error: function() {
                 console.log("error!")
@@ -54,8 +53,16 @@
             "width": 800,
             "height": 500,
             "grid": {
-                header: {},
-                body: {}
+                header: {
+                    title: "ZingGrid",
+                    subTitle: "subtitle goes here",
+                    menuBar: true
+                },
+                body: {
+                    column: {
+                        width: 50
+                    }
+                }
             },
         };
         inputEditor.set(json);
@@ -72,18 +79,18 @@
 
 
                 // House cleaning extra dummy dom elements
-                Array.prototype.forEach.call(
-                    document.querySelectorAll('textarea'),
-                    function(extraNode) {
-                        extraNode.parentNode.removeChild(extraNode)
-                    });
-                Array.prototype.forEach.call(
-                    document.querySelectorAll('div[class^="zg-load-mask"]'),
-                    function(extraNode) {
-                        extraNode.parentNode.removeChild(extraNode)
-                    });
+                //Array.prototype.forEach.call(
+                //    document.querySelectorAll('textarea'),
+                //    function(extraNode) {
+                //        extraNode.parentNode.removeChild(extraNode)
+                //    });
+                //Array.prototype.forEach.call(
+                //    document.querySelectorAll('div[class^="zg-load-mask"]'),
+                //    function(extraNode) {
+                //        extraNode.parentNode.removeChild(extraNode)
+                //    });
 
-                //zinggrid.render(outputJson);
+                zinggrid.render(outputJson);
 
             });
         })

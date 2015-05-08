@@ -178,18 +178,34 @@ exports.extend = function extend(a, b) {
     return a;
 };
 
-exports.deepExtend = function(destination, source) {
-  for (var property in source) {
-    if (source[property] && source[property].constructor &&
-     source[property].constructor === Object) {
-      destination[property] = destination[property] || {};
-      arguments.callee(destination[property], source[property]);
-    } else {
-      destination[property] = source[property];
+exports.deepExtend = function deepExtend(destination, source) {
+    for (var property in source) {
+        if (source[property] && source[property].constructor &&
+            source[property].constructor === Object) {
+            destination[property] = destination[property] || {};
+            arguments.callee(destination[property], source[property]);
+        } else if (source[property] && source[property].constructor && source[property].constructor === Array) {
+            destination[property] = destination[property] || [];
+            arguments.callee(destination[property], source[property]);
+        } else {
+            destination[property] = source[property];
+        }
     }
-  }
-  return destination;
+    return destination;
 };
+
+//var x = {
+    //data: [
+        //[null, null, 3]
+    //]
+//};
+//var y = {
+    //data: [
+        //[null, 2]
+    //]
+//};
+//exports.deepExtend(x, y);
+//console.log(x);
 
 /**
  * delete a property in an object with a given path
@@ -203,7 +219,6 @@ exports.deepDelete = function (obj /*, path*/ ) {
     var path = arguments[1];
     // path
 
-    //console.log(path);
     // when root is unchecked, set treemode.checked to {}
     if (path.length === 0) return {};
 

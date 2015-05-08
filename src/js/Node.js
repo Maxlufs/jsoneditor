@@ -89,6 +89,8 @@ Node.prototype.jsonOnPath = function () {
         root = [];
     else if(typeof path[0] === "string")
         root = {};
+    else if(typeof path[0] === "undefined") // check on root node
+        return this.getValue();
 
     var curr = root;
     var currKey,nextKey;
@@ -104,7 +106,6 @@ Node.prototype.jsonOnPath = function () {
             curr[currKey] = this.getValue();
         curr = curr[currKey];
     }
-
 
     return root;
 };

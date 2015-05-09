@@ -297,7 +297,8 @@ treemode._onAction = function (action, params) {
     // trigger the onChange callback
     if (this.options.change) {
         try {
-            this.options.change();
+            // HOTFIX adding params.this to envoke function on the node
+            this.options.change(params.node);
         } catch (err) {
             util.log('Error in change callback: ', err);
         }
@@ -388,7 +389,6 @@ treemode.setChecked = function (node) {
 
 
     if (node.dom.checkbox.checked) { // if checking the checkbox
-        console.log(node.jsonOnPath());
         this.checked = util.deepExtend(this.checked, node.jsonOnPath());
     } else {
         var path = node.path();

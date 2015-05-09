@@ -222,7 +222,6 @@
   color: #1A1A1A;
 }
 
-/*.jsoneditor td:nth-child(2) {*/
-	/*text-align: center;*/
-	/*vertical-align: middle;*/
-/*}*/
+.jsoneditor td:nth-child(2) {
+	text-align: center;
+}

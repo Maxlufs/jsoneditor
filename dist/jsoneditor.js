@@ -24,7 +24,7 @@
  *
  * @author  Jos de Jong, <wjosdejong@gmail.com>
  * @version 4.1.3
- * @date    2015-05-07
+ * @date    2015-05-08
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -678,7 +678,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // trigger the onChange callback
 	    if (this.options.change) {
 	        try {
-	            this.options.change();
+	            // HOTFIX adding params.this to envoke function on the node
+	            this.options.change(params.node);
 	        } catch (err) {
 	            util.log('Error in change callback: ', err);
 	        }
@@ -769,7 +770,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 	    if (node.dom.checkbox.checked) { // if checking the checkbox
-	        console.log(node.jsonOnPath());
 	        this.checked = util.deepExtend(this.checked, node.jsonOnPath());
 	    } else {
 	        var path = node.path();
@@ -3134,6 +3134,18 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    this.showChilds();
 
+	    // HOTFIX when expand a checked node, check all its children
+	    if (this.dom.checkbox.checked && !this.dom.checkbox.indeterminate) {
+	        this._onCheck();
+	        //this.childs.forEach(function (child) {
+	            //child.dom.checkbox.indeterminate = false;
+	            //child.dom.checkbox.checked = true;
+	        //});
+	    }
+	    //this.editor._onAction('expand', {
+	        //'node': this,
+	    //});
+
 	    if (recurse !== false) {
 	        this.childs.forEach(function (child) {
 	            child.expand(recurse);
@@ -5015,15 +5027,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	Node.prototype._propdown = function () {
 	    // a dfs over all the child nodes
 	    var parent = this;
+	    console.log(this);
 	    if (this.childs) {
 	        this.childs.forEach(function (child) {
+	            if (child.dom.checkbox) { // only props down when the node is not expanded
+	                // jsoneditor adds/deletes expanded nodes
+	                // when it's not expanded, child.dom is undefined
+
 	            // children's checkbox will be the same as parent's checkbox status
 	            // since indeterminate has higher precedence than checked,
 	            // disable indeterminate first
 	            child.dom.checkbox.indeterminate = false;
 	            child.dom.checkbox.checked = parent.dom.checkbox.checked;
 	            child._propdown();
-	        });
+
+	        }});
 	    }
 	};
 
@@ -5070,6 +5088,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	Node.prototype._onCheck = function () {
+	    //console.log(this)
 	    // propagate down
 	    this._propdown();
 	    //propagate up

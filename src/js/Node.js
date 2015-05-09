@@ -309,6 +309,18 @@ Node.prototype.expand = function (recurse) {
 
     this.showChilds();
 
+    // HOTFIX when expand a checked node, check all its children
+    if (this.dom.checkbox.checked && !this.dom.checkbox.indeterminate) {
+        this._onCheck();
+        //this.childs.forEach(function (child) {
+            //child.dom.checkbox.indeterminate = false;
+            //child.dom.checkbox.checked = true;
+        //});
+    }
+    //this.editor._onAction('expand', {
+        //'node': this,
+    //});
+
     if (recurse !== false) {
         this.childs.forEach(function (child) {
             child.expand(recurse);
@@ -2190,15 +2202,21 @@ Node.prototype._onDuplicate = function () {
 Node.prototype._propdown = function () {
     // a dfs over all the child nodes
     var parent = this;
+    console.log(this);
     if (this.childs) {
         this.childs.forEach(function (child) {
+            if (child.dom.checkbox) { // only props down when the node is not expanded
+                // jsoneditor adds/deletes expanded nodes
+                // when it's not expanded, child.dom is undefined
+
             // children's checkbox will be the same as parent's checkbox status
             // since indeterminate has higher precedence than checked,
             // disable indeterminate first
             child.dom.checkbox.indeterminate = false;
             child.dom.checkbox.checked = parent.dom.checkbox.checked;
             child._propdown();
-        });
+
+        }});
     }
 };
 
@@ -2245,6 +2263,7 @@ Node.prototype._propup = function () {
 };
 
 Node.prototype._onCheck = function () {
+    //console.log(this)
     // propagate down
     this._propdown();
     //propagate up
